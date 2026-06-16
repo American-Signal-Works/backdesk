@@ -16,7 +16,7 @@ Use this skill to convert a design or feature request into an auditable repo wor
 5. Stop for user approval or edits.
 6. Implement from the approved contract.
 7. Run verification and simplify the integrated code without changing behavior.
-8. Run QA against the contract.
+8. Run QA against the contract, including browser E2E for user-facing flows.
 9. Fix QA notes.
 10. Repeat implementation, simplification, QA, and fixes until done or blocked.
 11. Clean up temporary workflow artifacts.
@@ -37,7 +37,7 @@ The skill is Codex-discoverable, but the repo copy remains the team-reviewed sou
 
 After implementation begins, keep looping through implementation, verification, QA, and fixes until one of these outcomes is true:
 
-- **Done**: all approved acceptance criteria pass, required verification commands pass or are documented as unavailable, QA has no unresolved required findings, and the security/privacy gate passes.
+- **Done**: all approved acceptance criteria pass, required verification commands pass or are documented as unavailable, required browser E2E checks pass or are explicitly blocked/deferred, QA has no unresolved required findings, and the security/privacy gate passes.
 - **Blocked**: progress requires user approval, unavailable credentials, missing external services, an unresolved product decision, or a conflicting scope change.
 - **Deferred by approval**: the user explicitly accepts a remaining issue as deferred.
 
@@ -331,6 +331,7 @@ Plan work as small packages with clear ownership:
 - Installed component primitives to reuse.
 - Missing components to add, update, or intentionally avoid.
 - Security-sensitive files, flows, data, permissions, and dependencies.
+- Browser E2E requirement, command, test data, viewports, and external-service handling.
 - Dependencies between tasks.
 - Verification expected from each task.
 
@@ -342,7 +343,7 @@ Recommended roles:
 - `prd-writer`: produce or revise the design contract and acceptance criteria.
 - `frontend-engineer`: implement routes, components, visual styling, client interactions, responsive behavior, and accessibility details.
 - `backend-engineer`: implement server actions, API routes, schema, auth/session behavior, data flow, and external-service integrations.
-- `test-engineer`: add or update focused tests.
+- `test-engineer`: add or update focused unit, integration, and browser E2E tests.
 - `simplification-engineer`: perform behavior-preserving frontend, backend, test, and integration cleanup after initial checks pass.
 - `qa-reviewer`: review the integrated result against the contract.
 - `security-reviewer`: review auth, data, secrets, external services, and dependency risk.
@@ -444,6 +445,30 @@ Before declaring done:
 - Mark the run `Blocked` when required credentials, verified domains, DNS, billing, or service access are missing.
 - Mark any unverified live-service behavior as `Deferred by approval` only when the user explicitly accepts it.
 
+## Browser E2E QA Gate
+
+Run browser E2E verification after implementation and simplification for user-facing behavior.
+
+Require this gate when the approved scope includes any of:
+
+- Figma-backed UI, route changes, navigation, auth/session/callback behavior, forms, data mutations, onboarding, dashboards, responsive or visual changes.
+- Payment, email, upload/download, external-service, or public workflow behavior that must be exercised in a browser.
+- Accessibility or keyboard behavior that cannot be proven from static code review.
+
+Make it optional for pure backend or internal changes when unit and integration tests cover the accepted behavior.
+
+Process:
+
+- Prefer the repo's existing E2E command and framework, such as Playwright. Add a focused E2E test for the approved happy path when practical.
+- Cover at least one validation, error, access-denied, or recovery path for risky flows.
+- Start the app when needed and inspect the running route with browser tooling across desktop and mobile viewports.
+- Use local, staging, mocked, or seeded data. Do not perform destructive production actions.
+- For auth, OTP, payment, or email flows, use test providers, mocks, intercepted emails, or staging credentials when available. Verify live provider behavior only when credentials and safe test data are available.
+- Capture screenshots, traces, console errors, network/API failures, or manual notes when visual fidelity or debugging evidence matters.
+- Record command, URL, viewport, data setup, artifacts, pass/fail result, and blockers in `qa-review.md`.
+
+If browser E2E fails, add required findings to `fix-list.md`, fix them, and rerun the smallest meaningful browser check before release prep. Mark the gate `Blocked` when required credentials, data, env vars, or external services are unavailable; mark it deferred only with explicit user approval.
+
 ## Phase 4: QA Review
 
 Create `qa-review.md` using the template in `references/artifact-templates.md`.
@@ -458,10 +483,11 @@ QA must compare the actual result against:
 - Component state matrix and repo behavior fallback.
 - Flow transitions and validation paths.
 - Desktop and mobile behavior when UI is involved.
+- Browser E2E gate, including happy path and required negative/recovery path for user-facing flows.
 - Test, lint, typecheck, and build output.
 - Accessibility and keyboard interaction where relevant.
 
-For frontend work, start the local dev server when needed and inspect the running app with browser tooling. Do not rely only on static code review for visual changes.
+For frontend work, start the local dev server when needed, run the required browser E2E gate, and inspect the running app with browser tooling. Do not rely only on static code review for visual changes.
 
 ## Phase 5: Fix Notes
 

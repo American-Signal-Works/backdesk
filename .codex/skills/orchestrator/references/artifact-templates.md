@@ -214,6 +214,13 @@ Map Figma visual states to repo runtime behavior. If the Figma library cannot be
 - Unit:
 - Integration:
 - E2E:
+- Browser E2E gate: Required | Optional | Not applicable
+- Browser E2E scope:
+- Browser E2E happy path:
+- Browser E2E negative/recovery path:
+- Browser E2E data/env:
+- Browser E2E viewports:
+- Browser E2E blockers:
 - Manual/browser:
 - Visual comparison:
 - Security/privacy:
@@ -284,6 +291,21 @@ Status: Draft | In progress | Complete
 - Behavior-preservation checks:
 - Result: Pending | Applied | No simplification needed | Blocked
 
+## Browser E2E Plan
+
+- Required: yes | no
+- Reason:
+- Owner: main agent | test-engineer | qa-reviewer
+- Command:
+- Routes/flows:
+- Happy path:
+- Negative/recovery path:
+- Viewports:
+- Test data/env:
+- External service handling:
+- Artifacts: screenshots | trace | console/network notes | none
+- Result: Pending | Pass | Fail | Blocked | Deferred by approval
+
 ## Agent Roster
 
 | Agent | Role | Task | Model | Effort | Write scope | Verification |
@@ -295,6 +317,7 @@ Status: Draft | In progress | Complete
 - [ ] Acceptance criteria pass.
 - [ ] Required verification commands pass or are documented as unavailable.
 - [ ] Simplification pass completed or explicitly marked unnecessary.
+- [ ] Browser E2E gate passes or is explicitly blocked/deferred with approval.
 - [ ] QA has no unresolved required findings.
 - [ ] Security/privacy gate passes.
 - [ ] Required external services are verified or explicitly blocked/deferred with approval.
@@ -346,8 +369,13 @@ Status: Pass | Pass with notes | Fail
 - Typecheck:
 - Unit tests:
 - E2E tests:
+- Browser E2E gate:
+- Browser E2E command:
+- Browser E2E environment/data:
+- Browser E2E artifacts:
 - Build:
 - Browser/manual:
+- Desktop/mobile:
 - Approved slice boundary:
 - Figma comparison:
 - Asset/icon fidelity:
@@ -372,6 +400,18 @@ Status: Pass | Pass with notes | Fail
 - Focus:
 - Labels/roles:
 - Contrast:
+
+## Browser E2E Check
+
+- Required: yes | no
+- Reason:
+- Happy path result:
+- Negative/recovery path result:
+- Desktop viewport:
+- Mobile viewport:
+- Console/network issues:
+- Screenshots/traces:
+- Blockers/deferred items:
 
 ## Security And Privacy Check
 

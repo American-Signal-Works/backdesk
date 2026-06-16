@@ -41,6 +41,7 @@ subagent_policy:
     owner: "main-agent"
     default_for_complex_scope: "spawn independent read-only QA or security reviewer"
     required_record: "qa-review.md and fix-list.md"
+    browser_e2e_required_for_user_facing_flows: true
 
 figma_library_state_policy:
   required_for_figma_backed_work: true
@@ -79,6 +80,23 @@ shadcndesign_policy:
     - "import-variables for Figma style-guide token sync"
   secret_rule: "never commit real license keys, registry tokens, generated .env files, or screenshots containing secrets"
   fallback: "record blocked MCP/license/registry access and get approval before custom-building a registry component"
+
+browser_e2e_policy:
+  required_for_user_facing_flows: true
+  required_record:
+    - "design-contract.md Test Plan"
+    - "implementation-plan.md Browser E2E Plan"
+    - "qa-review.md Browser E2E Check"
+  required_when:
+    - "Figma-backed UI or visual implementation"
+    - "routes, navigation, forms, onboarding, dashboards, or data mutations"
+    - "auth, sessions, callbacks, public workflows, or authorization-sensitive UI"
+    - "payment, email, upload/download, external-service, or provider-backed browser flows"
+    - "responsive, keyboard, or accessibility behavior requiring runtime verification"
+  optional_when: "pure backend or internal changes covered by unit and integration tests"
+  preferred_framework: "repo E2E framework such as Playwright plus browser tooling for visual/manual inspection"
+  minimum_coverage: "approved happy path plus one validation, error, access-denied, or recovery path for risky flows"
+  blocker_record: "missing credentials, env vars, seeded data, external services, or safe test account"
 
 scope_sizing_policy:
   required_before_implementation_plan: true
