@@ -1,7 +1,7 @@
 interface:
   display_name: "Orchestrator"
-  short_description: "Coordinate PRD, subagents, QA, release"
-  default_prompt: "Use $orchestrator to run this feature from design contract through QA and release prep."
+  short_description: "Coordinate PRD, bugfix, QA, release"
+  default_prompt: "Use $orchestrator to run this feature or bugfix from contract through QA and release prep."
 
 policy:
   allow_implicit_invocation: true
@@ -15,6 +15,7 @@ subagent_policy:
     complex_example: "Figma plus auth or external service such as Resend OTP"
     required_record: "design-contract.md Subagent Discovery"
     use_for:
+      - "bug reproduction, triage, and root cause discovery"
       - "Figma plus repo discovery"
       - "Figma asset and icon inventory"
       - "Figma library component state discovery"
@@ -53,6 +54,29 @@ figma_library_state_policy:
   authoritative_sources: "prefer direct component source links for state matrices when consuming frames do not expose nested library states"
   fallback: "repo primitive behavior plus shadcn or local component docs when remote library metadata is inaccessible"
   blocked_record: "permission, stale node, missing library access, or Developer-seat limitation"
+
+bugfix_policy:
+  required_when_mode_is_bugfix: true
+  required_record:
+    - "design-contract.md Bugfix Context"
+    - "design-contract.md Root Cause And Fix Contract"
+    - "implementation-plan.md Bugfix Plan"
+    - "qa-review.md Bugfix Verification"
+  reproduce_first: true
+  minimum_contract:
+    - "expected versus actual behavior"
+    - "reproduction status and evidence"
+    - "severity, user impact, affected surface"
+    - "suspected root cause and fix strategy"
+    - "regression test plan"
+    - "verification and rollback or mitigation notes"
+  use_subagents_when:
+    - "bug is not yet reproduced"
+    - "root cause is unclear"
+    - "production, CI, auth, data, external services, or security-sensitive behavior is affected"
+    - "frontend and backend investigation can happen independently"
+  fix_rule: "implement the smallest durable root-cause fix; do not broaden a bugfix into feature work without approval"
+  verification_rule: "run the targeted check that would have caught the bug and add or justify a regression test"
 
 figma_asset_policy:
   required_for_figma_backed_work: true

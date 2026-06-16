@@ -1,6 +1,6 @@
 ---
 name: orchestrator
-description: Run a Codex-owned product delivery orchestration workflow from a Figma design, shadcndesign/shadcn-backed UI kit, feature brief, or bug report through design contract, user approval, Codex subagent implementation, QA review, fix pass, and merge or release. Use when the user asks for Orchestrator, a design-to-code workflow, Figma-to-implementation handoff, PRD/design contract generation, orchestrated subagents for feature implementation or bug fixing, QA review loops, or release-ready implementation from an approved contract.
+description: Run a Codex-owned product delivery orchestration workflow from a Figma design, shadcndesign/shadcn-backed UI kit, feature brief, or bug report through design contract or bugfix contract, user approval, Codex subagent implementation, QA review, fix pass, and merge or release. Use when the user asks for Orchestrator, a design-to-code workflow, Figma-to-implementation handoff, PRD/design contract generation, bug triage and bugfix mode, orchestrated subagents for feature implementation or bug fixing, QA review loops, or release-ready implementation from an approved contract.
 ---
 
 # Orchestrator
@@ -9,10 +9,10 @@ description: Run a Codex-owned product delivery orchestration workflow from a Fi
 
 Use this skill to convert a design or feature request into an auditable repo workflow:
 
-1. Inspect Figma or source input.
+1. Inspect Figma, bug report, or source input.
 2. Inventory components, primitives, Figma library states, and assets.
-3. Map the user flow.
-4. Generate a design contract.
+3. Map the user flow or reproduce the bug.
+4. Generate a design contract or bugfix contract.
 5. Stop for user approval or edits.
 6. Implement from the approved contract.
 7. Run verification and simplify the integrated code without changing behavior.
@@ -26,7 +26,7 @@ The skill is Codex-discoverable, but the repo copy remains the team-reviewed sou
 
 ## Required Gates
 
-- Do not implement before the design contract is approved.
+- Do not implement before the design contract or bugfix contract is approved.
 - Do not broaden scope beyond the approved contract without updating the contract and getting approval.
 - Do not merge, push, deploy, or release unless the user explicitly asks for that action.
 - Keep artifacts in the repo so other team members can review the workflow history.
@@ -63,7 +63,7 @@ Collect only the missing facts needed for the next gate. Prefer using available 
 
 Required inputs:
 
-- Source: Figma node URL, issue, bug report, or feature brief.
+- Source: Figma node URL, issue, bug report, reproduction steps, failing test, logs, screenshot, trace, or feature brief.
 - Component source links for Figma-backed work when available: direct component-set links, library component links, state-matrix frames, icon/library source links, or design-system docs.
 - Design-system kit or registry details when known, especially shadcndesign registry alias, registry URL, package docs, agent skill availability, and whether the license-key env var is configured.
 - Target surface: route, screen, component, flow, or package.
@@ -79,6 +79,35 @@ For library-backed Figma designs, prefer this handoff shape:
 - Asset/icon sources: direct links to icon, logo, illustration, or library source frames when the target flow uses external assets.
 
 Treat component-source links as authoritative for state discovery when nested library components cannot be fully resolved from the consuming frames.
+
+## Bugfix Mode
+
+Use bugfix mode when the user reports broken behavior, regressions, failing tests, runtime errors, visual defects, deployment failures, CI failures, or unexpected product behavior.
+
+Bugfix mode is evidence-first:
+
+1. Capture the observed behavior, expected behavior, affected surface, severity, and blast radius.
+2. Reproduce the bug or explain exactly why reproduction is blocked.
+3. Identify the likely regression range, suspect files, recent related changes, and dependency or environment factors.
+4. Write a concise bugfix contract before changing code.
+5. Implement the smallest durable fix that addresses the root cause.
+6. Add or update a regression test when practical.
+7. Run the targeted verification that would have caught the bug, then run broader checks only as risk warrants.
+8. Run QA, browser E2E when user-facing, and security/privacy review when the bug touches sensitive behavior.
+
+Bugfix contracts must include:
+
+- Bug summary, severity, user impact, and affected route/component/API/job.
+- Evidence: reproduction steps, screenshots, logs, traces, failing commands, browser console/network errors, CI links, or customer reports.
+- Expected versus actual behavior.
+- Reproducibility status: reproduced, not reproduced, intermittent, environment-specific, or blocked.
+- Suspected root cause and files or systems to inspect.
+- Fix strategy and non-goals.
+- Regression test plan or reason a test is not practical.
+- Verification plan, including browser E2E for user-facing bugs.
+- Rollback or mitigation notes when release risk is meaningful.
+
+For urgent bugs where the user explicitly asks for an immediate fix, keep the contract short but still record reproduction, root cause, fix scope, and verification before editing. Do not broaden a bugfix into feature work without updating the contract and getting approval.
 
 ## Scope Sizing And Issue Split
 
@@ -233,7 +262,7 @@ When the Figma source uses the shadcndesign.com Figma kit or registry, treat it 
 
 ## Phase 1: Design Contract
 
-Create `design-contract.md` using the template in `references/artifact-templates.md`.
+Create `design-contract.md` using the template in `references/artifact-templates.md`. For `mode: bugfix`, fill the bugfix sections and treat the file as the bugfix contract.
 
 Before drafting, decide whether to use contract-phase subagents. For non-trivial features, use read-only subagents when available for independent discovery, then synthesize the contract in the main agent.
 
@@ -241,6 +270,7 @@ Use contract-phase subagents when any of these are true:
 
 - The source includes Figma plus repo implementation questions.
 - The feature touches auth, permissions, user data, email, payments, external services, migrations, or security-sensitive flows.
+- The bug is not yet reproduced, is intermittent, affects production, CI, auth, data, external services, or has unclear root cause.
 - The design depends on component-system mapping, shadcn primitive availability, or responsive/visual parity.
 - There are two or more independent discovery tracks that can run in parallel.
 - The contract has unclear product assumptions that need evidence before approval.
@@ -252,6 +282,7 @@ If subagents are not used for a non-trivial contract, record the reason in `desi
 The contract must include:
 
 - Goal and user value.
+- Bug summary, expected versus actual behavior, reproduction evidence, and suspected root cause when in bugfix mode.
 - Source links and screenshots inspected.
 - Scope size recommendation and approved implementation slice for large flows.
 - Figma frame inventory when applicable.

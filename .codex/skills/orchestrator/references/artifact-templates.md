@@ -37,6 +37,27 @@ Mode: feature | bugfix | design-polish | release
 
 <One paragraph describing the user value and product outcome.>
 
+## Bugfix Context
+
+- Applies: yes | no
+- Bug summary:
+- Severity: P0 | P1 | P2 | P3
+- User impact:
+- Affected surface:
+- First known bad version/commit/deploy:
+- Last known good version/commit/deploy:
+- Frequency: always | intermittent | unknown
+- Environment: local | preview | staging | production | CI | unknown
+- Expected behavior:
+- Actual behavior:
+- Reproduction status: Reproduced | Not reproduced | Intermittent | Blocked | Not needed
+- Reproduction steps:
+- Evidence: <logs, screenshots, traces, failing commands, CI links, browser console/network errors>
+- Suspected root cause:
+- Suspect files/systems:
+- Mitigation or rollback:
+- Regression test plan:
+
 ## Scope
 
 ### In
@@ -192,6 +213,17 @@ Map Figma visual states to repo runtime behavior. If the Figma library cannot be
 - Validation:
 - Failure modes:
 
+## Root Cause And Fix Contract
+
+- Applies: bugfix | n/a
+- Root cause:
+- Fix strategy:
+- Non-goals:
+- Regression risk:
+- Compatibility/migration impact:
+- Observability/logging impact:
+- Rollback plan:
+
 ## Security And Privacy
 
 - Auth/authz impact:
@@ -208,6 +240,9 @@ Map Figma visual states to repo runtime behavior. If the Figma library cannot be
 ## Acceptance Criteria
 
 - [ ] <Observable acceptance criterion>
+- [ ] <For bugfix: original bug is reproduced before the fix or reproduction blocker is documented>
+- [ ] <For bugfix: expected behavior is verified after the fix>
+- [ ] <For bugfix: regression test added or test gap explicitly justified>
 
 ## Test Plan
 
@@ -252,6 +287,19 @@ Status: Draft | In progress | Complete
 - Slice:
 - Scope boundary:
 - Deferred slices:
+
+## Bugfix Plan
+
+- Applies: yes | no
+- Reproduction command/path:
+- Failing test or missing test:
+- Suspected root cause:
+- Minimal fix:
+- Files allowed:
+- Files off-limits:
+- Regression test:
+- Verification:
+- Rollback/mitigation:
 
 ## Component Plan
 
@@ -328,7 +376,7 @@ Status: Draft | In progress | Complete
 
 ### Package 1: <name>
 
-- Owner: main agent | frontend-engineer | backend-engineer | test-engineer | simplification-engineer
+- Owner: main agent | frontend-engineer | backend-engineer | test-engineer | simplification-engineer | qa-reviewer
 - Write scope:
 - Read scope:
 - Must not edit:
@@ -376,6 +424,9 @@ Status: Pass | Pass with notes | Fail
 - Build:
 - Browser/manual:
 - Desktop/mobile:
+- Bug reproduction:
+- Bug regression test:
+- Root cause verified:
 - Approved slice boundary:
 - Figma comparison:
 - Asset/icon fidelity:
@@ -389,6 +440,16 @@ Status: Pass | Pass with notes | Fail
 | Priority | Finding | Evidence | Required Fix |
 |---|---|---|---|
 | P0/P1/P2/P3 | <issue> | <file, screenshot, command, or URL> | <fix> |
+
+## Bugfix Verification
+
+- Applies: yes | no
+- Original bug reproduced before fix: yes | no | blocked
+- Reproduction evidence:
+- Root cause:
+- Fix verified:
+- Regression test:
+- Remaining risk:
 
 ## Acceptance Criteria Check
 
