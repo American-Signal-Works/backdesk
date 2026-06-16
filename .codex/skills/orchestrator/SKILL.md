@@ -74,8 +74,18 @@ If a Figma URL is provided, use available Figma tooling to inspect the node and 
 For Figma-backed work, structure intake in this order:
 
 1. **Figma**: list frames, node IDs, screenshots inspected, frame names, and the state each frame represents.
-2. **Components**: inventory Figma blocks, primitives, component variants, design-system docs links, repo component matches, and missing repo components.
-3. **Flow**: describe the user actions, transitions, validation paths, and success/error states between frames.
+2. **Visible controls**: list every visible interactive control, even when functionally out of scope, including social login buttons, secondary links, menus, toggles, and footer/legal links.
+3. **Components**: inventory Figma blocks, primitives, component variants, design-system docs links, repo component matches, and missing repo components.
+4. **Flow**: describe the user actions, transitions, validation paths, and success/error states between frames.
+
+For each design-visible control, decide whether it is:
+
+- **Implemented**: functional in this delivery.
+- **Visual placeholder**: rendered but disabled or non-functional by approved scope.
+- **Hidden/deferred**: omitted for this delivery despite being visible in Figma.
+- **Open question**: requires user approval before contract approval.
+
+Do not bury visible-but-out-of-scope controls in general notes. Put them in the contract's visible-control table and either acceptance criteria, explicit non-goals, or open questions. This is required for OAuth/social buttons, payment buttons, export/share controls, destructive actions, admin controls, and any control that implies an external service.
 
 Do not treat generated Figma code as implementation-ready. Use it as a visual and structural reference, then adapt it to the repo's framework, component library, tokens, and interaction patterns.
 
@@ -97,6 +107,20 @@ Required checks:
 
 Create `design-contract.md` using the template in `references/artifact-templates.md`.
 
+Before drafting, decide whether to use contract-phase subagents. For non-trivial features, use read-only subagents when available for independent discovery, then synthesize the contract in the main agent.
+
+Use contract-phase subagents when any of these are true:
+
+- The source includes Figma plus repo implementation questions.
+- The feature touches auth, permissions, user data, email, payments, external services, migrations, or security-sensitive flows.
+- The design depends on component-system mapping, shadcn primitive availability, or responsive/visual parity.
+- There are two or more independent discovery tracks that can run in parallel.
+- The contract has unclear product assumptions that need evidence before approval.
+
+Keep the design contract top-level owned. Subagents gather evidence and risks; the main agent writes and presents the contract, owns assumptions, and handles user approval. Do not delegate final scope, acceptance criteria, or approval decisions unless the user explicitly asks for a separate PRD-writing pass.
+
+If subagents are not used for a non-trivial contract, record the reason in `design-contract.md` under `Subagent Discovery`.
+
 The contract must include:
 
 - Goal and user value.
@@ -112,6 +136,54 @@ The contract must include:
 - Non-goals and open questions.
 
 After writing the contract, stop and ask the user to approve or edit it. The next phase starts only after approval.
+
+## Subagent Policy
+
+Subagents are a coordination tool, not a replacement for the main orchestrator. The main agent owns the critical path, integration, user-facing decisions, and final answer.
+
+Treat an explicit request to "Use Orchestrator" as permission to use subagents when the rubric below calls for them, unless the user says to keep the work top-level-only. If subagent tooling is unavailable, continue top-level and record that limitation in the relevant artifact.
+
+Before spawning any subagent, state the subagent plan in the active artifact or progress update:
+
+- Role and purpose.
+- Exact question or task.
+- Model and effort from the model policy.
+- Read scope and write scope.
+- Expected output and where it should be recorded.
+- Whether the task is parallel sidecar work or required before the next gate.
+
+Use subagents for:
+
+- Read-only discovery that can run in parallel, such as Figma frame inventory, repo route scans, shadcn primitive mapping, external-service docs checks, or security risk enumeration.
+- Disjoint implementation packages with clear file ownership.
+- Independent QA, accessibility, visual, or security review after integration.
+- Release preparation when it does not block active fixes.
+
+Do not use subagents for:
+
+- User approval, final contract ownership, or final release decision.
+- Immediate blocking work when the main agent can do it faster on the critical path.
+- Overlapping edits to the same files or modules.
+- Vague research requests without a concrete output.
+
+Contract phase default:
+
+- Simple or single-surface change: top-level-only is acceptable; record "Subagents: not used - simple scope."
+- Non-trivial Figma-to-code, auth, data, or external-service feature: use at least one `contract-explorer` or `security-reviewer` when tooling is available.
+- Figma plus auth or external services, such as "Use Orchestrator for this auth flow" with Resend/Supabase/email delivery, should usually spawn separate read-only discovery for Figma/component mapping and repo/security/external dependency risk.
+- Large or ambiguous PRD: optionally use `prd-writer` for a draft subsection, but the main agent must review, edit, and own the final contract.
+
+Implementation phase default:
+
+- Split workers by disjoint write scope.
+- Tell workers they are not alone in the codebase, must not revert others' edits, and must list changed paths.
+- Keep integration, conflict resolution, and verification orchestration in the main agent.
+
+QA phase default:
+
+- Use `qa-reviewer` or `security-reviewer` for independent review on complex or risky changes.
+- Reviewers should be read-only unless explicitly assigned a fix package.
+- Required findings feed `fix-list.md`; the main agent owns the fix loop.
 
 ## Phase 2: Implementation Plan
 

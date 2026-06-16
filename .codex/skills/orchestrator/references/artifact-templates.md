@@ -19,6 +19,16 @@ Mode: feature | bugfix | design-polish | release
 - Screenshots inspected: <paths or URLs>
 - Design system/kit: <shadcn, shadcndesign.com, custom, or n/a>
 
+## Subagent Discovery
+
+- Used: yes | no
+- If no, reason:
+- Runtime/model limitation:
+
+| Agent | Role | Question/task | Model | Effort | Scope | Output |
+|---|---|---|---|---|---|---|
+| <A1 or n/a> | <contract-explorer/security-reviewer/etc.> | <bounded ask> | <model or inherited> | <medium/high/xhigh> | <read-only paths/Figma/docs> | <finding or artifact> |
+
 ## Goal
 
 <One paragraph describing the user value and product outcome.>
@@ -53,6 +63,14 @@ Mode: feature | bugfix | design-polish | release
 | Figma primitive/block | Figma node/doc | Repo component | Status | Notes |
 |---|---|---|---|---|
 | <Button> | <node/doc link> | `<Button>` | Installed/Missing/Custom | <variant, size, state> |
+
+## Design-Visible Controls
+
+List every visible interactive control from the design, even when it is not functional in this delivery.
+
+| Control | Visible in Figma | Implementation decision | Functional scope | Notes |
+|---|---|---|---|---|
+| <Apple login button> | yes | Implemented/Visual placeholder/Hidden/Deferred/Open question | In/Out/Pending | <OAuth/provider/setup implications> |
 
 ## Flow Map
 

@@ -6,6 +6,32 @@ interface:
 policy:
   allow_implicit_invocation: true
 
+subagent_policy:
+  explicit_orchestrator_invocation: "permission to use subagents when rubric calls for them"
+  contract_phase:
+    owner: "main-agent"
+    default_for_simple_scope: "top-level-only with reason recorded"
+    default_for_complex_scope: "spawn read-only explorers or reviewers when available"
+    complex_example: "Figma plus auth or external service such as Resend OTP"
+    required_record: "design-contract.md Subagent Discovery"
+    use_for:
+      - "Figma plus repo discovery"
+      - "auth, permissions, user data, email, payments, or external services"
+      - "component primitive mapping"
+      - "security and privacy risk enumeration"
+    do_not_delegate:
+      - "user approval"
+      - "final scope ownership"
+      - "final acceptance criteria ownership"
+  implementation_phase:
+    owner: "main-agent"
+    split_by: "disjoint write scope"
+    required_record: "implementation-plan.md Agent Roster"
+  qa_phase:
+    owner: "main-agent"
+    default_for_complex_scope: "spawn independent read-only QA or security reviewer"
+    required_record: "qa-review.md and fix-list.md"
+
 model_policy:
   default:
     model: "inherited"
