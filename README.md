@@ -9,7 +9,7 @@ A workspace for your data. Pages of blocks, collections, connections.
 - **Generic blocks** — Card, Chart, Table, Row blocks read from any collection (configure-after-drop, no separate block per chart type)
 - **IBKR Activity Statement importer** with round-trip trade aggregation (flat → position → flat, with flip handling)
 - **Trading templates** — Performance Dashboard, Daily Journal, Weekly Review (placeholder substitution)
-- **Auth** — email/password and Google OAuth (Supabase)
+- **Auth foundation** — Supabase sessions and RLS; sign-in UI is being rebuilt
 - **Settings** — Account (password, sign out, delete), Profile (avatar, name, timezone), Appearance (light/dark mode + accent color), Connections
 - **Cmd+K command palette** — fuzzy-search pages, create new ones, jump to settings
 - **Page emoji picker** — emoji-mart in a popover
@@ -44,6 +44,18 @@ Visit http://localhost:3000.
 - `pnpm test:e2e` — Playwright e2e (requires local Supabase running)
 - `pnpm db:migrate` — apply migrations to local Supabase
 - `pnpm db:types` — regenerate Supabase TypeScript types
+
+## Codex workflow
+
+Backdesk keeps shared Codex workflow instructions in the repo. For Figma-to-implementation work, use `.codex/skills/orchestrator/SKILL.md`.
+
+Install or update the skill for local Codex discovery:
+
+```bash
+mkdir -p "${CODEX_HOME:-$HOME/.codex}/skills"
+mkdir -p "${CODEX_HOME:-$HOME/.codex}/skills/orchestrator"
+rsync -a "$PWD/.codex/skills/orchestrator/" "${CODEX_HOME:-$HOME/.codex}/skills/orchestrator/"
+```
 
 ## Project layout
 

@@ -29,12 +29,11 @@ export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const isAppRoute = path === "/" || path.startsWith("/p/") || path.startsWith("/c/")
     || path.startsWith("/settings");
-  const isAuthRoute = path.startsWith("/sign-in") || path.startsWith("/sign-up")
-    || path.startsWith("/reset-password");
+  const isAuthRoute = path.startsWith("/login");
 
   if (isAppRoute && !user) {
     const url = request.nextUrl.clone();
-    url.pathname = "/sign-in";
+    url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 

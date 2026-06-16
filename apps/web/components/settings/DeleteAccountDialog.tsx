@@ -45,7 +45,7 @@ export function DeleteAccountDialog() {
             onClick={() => startTransition(async () => {
               const result = await deleteAccount();
               if (!result.ok) toast.error(result.error.message);
-              else window.location.href = "/sign-in";
+              else window.location.href = "/login";
             })}
           >
             Delete forever

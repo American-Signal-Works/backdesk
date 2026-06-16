@@ -89,7 +89,7 @@ export function useCommands(pages: PageRow[]): Command[] {
       label: "Sign out",
       run: async () => {
         try { await signOut(); } catch { /* server action redirect() throws — expected */ }
-        router.push("/sign-in");
+        router.push("/login");
         router.refresh();
       },
     },

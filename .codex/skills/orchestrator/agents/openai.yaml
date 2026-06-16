@@ -1,0 +1,49 @@
+interface:
+  display_name: "Orchestrator"
+  short_description: "Coordinate PRD, subagents, QA, release"
+  default_prompt: "Use $orchestrator to run this feature from design contract through QA and release prep."
+
+policy:
+  allow_implicit_invocation: true
+
+model_policy:
+  default:
+    model: "inherited"
+    reasoning_effort: "medium"
+  roles:
+    contract-explorer:
+      model: "gpt-5.5"
+      reasoning_effort: "high"
+    prd-writer:
+      model: "gpt-5.5"
+      reasoning_effort: "xhigh"
+    ui-worker:
+      model: "gpt-5.4"
+      reasoning_effort: "medium"
+    data-worker:
+      model: "gpt-5.4"
+      reasoning_effort: "high"
+    test-worker:
+      model: "gpt-5.4"
+      reasoning_effort: "medium"
+    qa-reviewer:
+      model: "gpt-5.5"
+      reasoning_effort: "xhigh"
+    security-reviewer:
+      model: "gpt-5.5"
+      reasoning_effort: "xhigh"
+    release-manager:
+      model: "gpt-5.4"
+      reasoning_effort: "medium"
+  escalation_triggers:
+    - "authentication"
+    - "authorization"
+    - "secrets"
+    - "PII"
+    - "email delivery"
+    - "payments"
+    - "RLS"
+    - "database migrations"
+    - "dependency changes"
+    - "public routes"
+    - "external APIs"

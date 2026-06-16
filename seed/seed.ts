@@ -61,7 +61,7 @@ async function main() {
   console.log(`  Email:    ${SEED_USER_EMAIL}`);
   console.log(`  Password: ${SEED_USER_PASSWORD}`);
   console.log("");
-  console.log("Next: sign in at http://localhost:3000/sign-in,");
+  console.log("Next: sign in once the rebuilt auth flow is available,");
   console.log("then go to + New page → Import data → choose the file:");
   console.log(`  ${csvPath}`);
   console.log("");
