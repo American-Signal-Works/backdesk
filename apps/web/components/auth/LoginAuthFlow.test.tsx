@@ -37,6 +37,14 @@ describe("LoginAuthFlow", () => {
     signOutCurrentSessionMock.mockReset()
   })
 
+  it("follows the app theme instead of forcing dark mode", () => {
+    const { container } = render(<LoginAuthFlow />)
+
+    const shell = container.querySelector("main")
+    expect(shell).toHaveClass("min-h-svh")
+    expect(shell).not.toHaveClass("dark")
+  })
+
   it("shows visible but unavailable social buttons", () => {
     render(<LoginAuthFlow />)
 

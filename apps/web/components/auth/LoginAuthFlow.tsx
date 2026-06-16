@@ -143,7 +143,9 @@ export function LoginAuthFlow() {
     setPendingAction(null)
 
     if (error) {
-      setOtpError("That code is invalid or expired. Request a new code and try again.")
+      setOtpError(
+        "That code is invalid or expired. Request a new code and try again."
+      )
       return
     }
 
@@ -196,7 +198,7 @@ export function LoginAuthFlow() {
   }
 
   return (
-    <main className="dark min-h-svh bg-muted text-foreground">
+    <main className="min-h-svh bg-muted text-foreground">
       <section className="flex min-h-svh items-center justify-center px-4 py-10">
         <div className="flex w-full flex-col items-center gap-6">
           <BrandMark />
@@ -382,9 +384,7 @@ function OtpStep({
         <CardTitle className="text-xl leading-tight font-semibold">
           Enter verification code
         </CardTitle>
-        <CardDescription>
-          We sent a 6-digit code to your email.
-        </CardDescription>
+        <CardDescription>We sent a 6-digit code to your email.</CardDescription>
       </CardHeader>
       <CardContent className="px-6 pb-6">
         <form className="flex flex-col gap-6" noValidate onSubmit={onSubmit}>
@@ -425,11 +425,7 @@ function OtpStep({
                 </FieldDescription>
               )}
             </Field>
-            <Button
-              className="w-full"
-              disabled={!canVerify}
-              type="submit"
-            >
+            <Button className="w-full" disabled={!canVerify} type="submit">
               {isVerifying && <Spinner data-icon="inline-start" />}
               {isVerifying ? "Verifying..." : "Verify"}
             </Button>
@@ -499,11 +495,17 @@ function TermsCopy() {
   return (
     <p className="max-w-[20rem] text-center text-xs leading-5 text-muted-foreground">
       By clicking continue, you agree to our{" "}
-      <a className="underline underline-offset-4 hover:text-foreground" href="#">
+      <a
+        className="underline underline-offset-4 hover:text-foreground"
+        href="#"
+      >
         Terms of Service
       </a>{" "}
       and{" "}
-      <a className="underline underline-offset-4 hover:text-foreground" href="#">
+      <a
+        className="underline underline-offset-4 hover:text-foreground"
+        href="#"
+      >
         Privacy Policy
       </a>
     </p>
