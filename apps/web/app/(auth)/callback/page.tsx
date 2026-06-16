@@ -15,11 +15,11 @@ export default function AuthCallbackPage() {
     let isMounted = true
 
     async function completeSignIn() {
-      const supabase = createClient()
       const url = new URL(window.location.href)
       const hashParams = new URLSearchParams(
         window.location.hash.replace(/^#/, "")
       )
+      const supabase = createClient()
 
       const callbackError =
         url.searchParams.get("error_description") ||
