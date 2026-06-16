@@ -16,6 +16,7 @@ subagent_policy:
     required_record: "design-contract.md Subagent Discovery"
     use_for:
       - "Figma plus repo discovery"
+      - "Figma library component state discovery"
       - "auth, permissions, user data, email, payments, or external services"
       - "component primitive mapping"
       - "security and privacy risk enumeration"
@@ -37,6 +38,15 @@ subagent_policy:
     owner: "main-agent"
     default_for_complex_scope: "spawn independent read-only QA or security reviewer"
     required_record: "qa-review.md and fix-list.md"
+
+figma_library_state_policy:
+  required_for_figma_backed_work: true
+  required_record:
+    - "design-contract.md Figma Library State Discovery"
+    - "design-contract.md Component State Matrix"
+  probe: "walk nested instances, resolve main components, inspect component sets and variant properties"
+  fallback: "repo primitive behavior plus shadcn or local component docs when remote library metadata is inaccessible"
+  blocked_record: "permission, stale node, missing library access, or Developer-seat limitation"
 
 model_policy:
   default:

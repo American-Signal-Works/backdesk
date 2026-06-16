@@ -10,7 +10,7 @@ description: Run a Codex-owned product delivery orchestration workflow from a Fi
 Use this skill to convert a design or feature request into an auditable repo workflow:
 
 1. Inspect Figma or source input.
-2. Inventory components and primitives.
+2. Inventory components, primitives, and Figma library states.
 3. Map the user flow.
 4. Generate a design contract.
 5. Stop for user approval or edits.
@@ -76,8 +76,9 @@ For Figma-backed work, structure intake in this order:
 
 1. **Figma**: list frames, node IDs, screenshots inspected, frame names, and the state each frame represents.
 2. **Visible controls**: list every visible interactive control, even when functionally out of scope, including social login buttons, secondary links, menus, toggles, and footer/legal links.
-3. **Components**: inventory Figma blocks, primitives, component variants, design-system docs links, repo component matches, and missing repo components.
-4. **Flow**: describe the user actions, transitions, validation paths, and success/error states between frames.
+3. **Library states**: inspect nested instances and linked library components for component sets, variants, component properties, and interaction states.
+4. **Components**: inventory Figma blocks, primitives, component variants, design-system docs links, repo component matches, and missing repo components.
+5. **Flow**: describe the user actions, transitions, validation paths, and success/error states between frames.
 
 For each design-visible control, decide whether it is:
 
@@ -89,6 +90,35 @@ For each design-visible control, decide whether it is:
 Do not bury visible-but-out-of-scope controls in general notes. Put them in the contract's visible-control table and either acceptance criteria, explicit non-goals, or open questions. This is required for OAuth/social buttons, payment buttons, export/share controls, destructive actions, admin controls, and any control that implies an external service.
 
 Do not treat generated Figma code as implementation-ready. Use it as a visual and structural reference, then adapt it to the repo's framework, component library, tokens, and interaction patterns.
+
+## Figma Library State Discovery
+
+When Figma frames use nested instances from a local or remote library, do not assume the selected frames include every component state. Before finalizing the design contract, run a read-only library state discovery pass when Figma tooling allows it.
+
+Required discovery:
+
+- Collect representative nested instances for each interactive primitive, such as buttons, inputs, OTP slots, selects, toggles, menu items, links, tabs, and destructive controls.
+- Resolve each instance to its main component with Figma Plugin API access, for example `instance.getMainComponentAsync()`.
+- Record whether the component is local or remote, its component key, parent component set, variant properties, component property definitions, exposed nested properties, and relevant documentation links.
+- Extract available visual states such as default, hover, focus, active/pressed, disabled, invalid, loading, selected, checked, open, and destructive variants.
+- Add the results to `Component State Matrix` in the design contract.
+
+For remote libraries:
+
+- If the main component or component set can be resolved from the consuming file, use that metadata directly.
+- If a component key is available and importing is needed for read access, use Figma Plugin API import methods only for read-only inspection and record that import was used.
+- If access is blocked by Figma permissions, Developer-seat requirements, missing published library access, or a stale node link, record the limitation and ask for a component-set link or library access only if the repo fallback is not enough.
+
+Fallback:
+
+- When library states cannot be resolved, use the repo component primitive as the behavior source and cite shadcn/repo docs or code.
+- Never drop expected web interactions because Figma state metadata is unavailable. Buttons and links still need pointer behavior, hover, focus-visible, active/pressed, disabled handling, keyboard access, and click/submit behavior from the repo primitives.
+
+The design contract must distinguish:
+
+- **Figma visual state source**: what the design library explicitly provides.
+- **Repo behavior source**: what the implemented component provides at runtime.
+- **Fallback or gap**: states inferred from repo primitives because Figma library metadata was inaccessible or incomplete.
 
 ## Shadcn-Backed Designs
 
@@ -128,6 +158,7 @@ The contract must include:
 - Source links and screenshots inspected.
 - Figma frame inventory when applicable.
 - Component primitive inventory and repo mapping.
+- Figma library state discovery and component state matrix when Figma-backed components are used.
 - Flow map between frames or states.
 - Affected routes, components, packages, data flows, and permissions.
 - Visual, responsive, interaction, loading, empty, and error states.
@@ -155,7 +186,7 @@ Before spawning any subagent, state the subagent plan in the active artifact or 
 
 Use subagents for:
 
-- Read-only discovery that can run in parallel, such as Figma frame inventory, repo route scans, shadcn primitive mapping, external-service docs checks, or security risk enumeration.
+- Read-only discovery that can run in parallel, such as Figma frame inventory, Figma library component state discovery, repo route scans, shadcn primitive mapping, external-service docs checks, or security risk enumeration.
 - Disjoint implementation packages with clear file ownership.
 - Independent QA, accessibility, visual, or security review after integration.
 - Release preparation when it does not block active fixes.
@@ -172,6 +203,7 @@ Contract phase default:
 - Simple or single-surface change: top-level-only is acceptable; record "Subagents: not used - simple scope."
 - Non-trivial Figma-to-code, auth, data, or external-service feature: use at least one `contract-explorer` or `security-reviewer` when tooling is available.
 - Figma plus auth or external services, such as "Use Orchestrator for this auth flow" with Resend/Supabase/email delivery, should usually spawn separate read-only discovery for Figma/component mapping and repo/security/external dependency risk.
+- Figma designs that use nested library instances should include read-only component-state discovery or an explicit access limitation before contract approval.
 - Large or ambiguous PRD: optionally use `prd-writer` for a draft subsection, but the main agent must review, edit, and own the final contract.
 
 Implementation phase default:
@@ -319,6 +351,7 @@ QA must compare the actual result against:
 - Approved contract.
 - Figma screenshot or feature source.
 - Component primitive mapping.
+- Component state matrix and repo behavior fallback.
 - Flow transitions and validation paths.
 - Desktop and mobile behavior when UI is involved.
 - Test, lint, typecheck, and build output.

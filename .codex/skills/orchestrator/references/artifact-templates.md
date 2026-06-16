@@ -58,6 +58,18 @@ Mode: feature | bugfix | design-polish | release
 |---|---|---|---|---|
 | <name> | <id> | <empty/loading/success/error/etc.> | <path or URL> | <notes> |
 
+## Figma Library State Discovery
+
+- Access status: Resolved | Partial | Blocked | Not needed
+- Method: get_design_context | get_metadata | Figma Plugin API probe | component-set link | repo fallback
+- Library/component-set links inspected:
+- Permission or runtime limitation:
+- Fallback source when unresolved:
+
+| Instance/control | Instance node | Main component | Component set | Remote | Key available | Variant/property metadata | Source/result |
+|---|---|---|---|---|---|---|---|
+| <Button> | <node id> | <name> | <set name> | yes/no | yes/no | <State, Variant, Size, etc.> | <resolved/partial/blocked> |
+
 ## Component Primitive Inventory
 
 | Figma primitive/block | Figma node/doc | Repo component | Status | Notes |
@@ -71,6 +83,14 @@ List every visible interactive control from the design, even when it is not func
 | Control | Visible in Figma | Implementation decision | Functional scope | Notes |
 |---|---|---|---|---|
 | <Apple login button> | yes | Implemented/Visual placeholder/Hidden/Deferred/Open question | In/Out/Pending | <OAuth/provider/setup implications> |
+
+## Component State Matrix
+
+Map Figma visual states to repo runtime behavior. If the Figma library cannot be resolved, use repo primitives as the behavior source and state the limitation.
+
+| Component/control | Figma visual states | Repo behavior source | Required runtime states | Fallback/gaps | Acceptance impact |
+|---|---|---|---|---|---|
+| <Button primary> | <default/hover/pressed/disabled or unresolved> | `<Button>` / shadcn docs | hover, focus-visible, active, disabled, pointer, click/submit | <none or limitation> | <criterion or n/a> |
 
 ## Flow Map
 
