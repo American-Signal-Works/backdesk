@@ -10,7 +10,7 @@ description: Run a Codex-owned product delivery orchestration workflow from a Fi
 Use this skill to convert a design or feature request into an auditable repo workflow:
 
 1. Inspect Figma or source input.
-2. Inventory components, primitives, and Figma library states.
+2. Inventory components, primitives, Figma library states, and assets.
 3. Map the user flow.
 4. Generate a design contract.
 5. Stop for user approval or edits.
@@ -70,15 +70,43 @@ Required inputs:
 
 If a Figma URL is provided, use available Figma tooling to inspect the node and screenshot. If the URL is not node-specific, ask for a node-specific link before producing the final contract.
 
+## Scope Sizing And Issue Split
+
+Before implementation planning, decide whether the requested feature should be one issue or a parent flow split into smaller implementation slices.
+
+Recommend splitting when the work includes two or more of:
+
+- Multiple screens or routes.
+- Both frontend and backend changes.
+- Authentication, authorization, sessions, RLS, or user data.
+- External services such as Resend, Stripe, storage, analytics, or model APIs.
+- New dependencies, migrations, env vars, DNS/domain setup, webhooks, or provider dashboard configuration.
+- Meaningful visual QA plus security/privacy QA.
+- More than one natural release or rollback boundary.
+
+For large flows, write the design contract for the full product flow, then propose an issue/slice plan before implementation. Each slice should have its own acceptance criteria, write scope, verification, external dependencies, and release boundary.
+
+Do not implement an oversized flow as one issue unless the user explicitly approves that scope. If the user approves only the first slice, keep later slices as deferred follow-up work and do not touch their files except where required for a stable interface.
+
+For auth-like flows, prefer slices such as:
+
+- Auth shell and route wiring.
+- Email OTP request and verification.
+- Email provider/Supabase SMTP configuration.
+- OAuth provider buttons and callback behavior.
+- Account/session settings cleanup.
+- End-to-end QA, security hardening, and release.
+
 ## Figma To Components To Flow
 
 For Figma-backed work, structure intake in this order:
 
 1. **Figma**: list frames, node IDs, screenshots inspected, frame names, and the state each frame represents.
 2. **Visible controls**: list every visible interactive control, even when functionally out of scope, including social login buttons, secondary links, menus, toggles, and footer/legal links.
-3. **Library states**: inspect nested instances and linked library components for component sets, variants, component properties, and interaction states.
-4. **Components**: inventory Figma blocks, primitives, component variants, design-system docs links, repo component matches, and missing repo components.
-5. **Flow**: describe the user actions, transitions, validation paths, and success/error states between frames.
+3. **Assets and icons**: inventory logos, icons, illustrations, photos, SVGs, raster assets, and vector nodes; identify their source library or export path.
+4. **Library states**: inspect nested instances and linked library components for component sets, variants, component properties, and interaction states.
+5. **Components**: inventory Figma blocks, primitives, component variants, design-system docs links, repo component matches, and missing repo components.
+6. **Flow**: describe the user actions, transitions, validation paths, and success/error states between frames.
 
 For each design-visible control, decide whether it is:
 
@@ -90,6 +118,31 @@ For each design-visible control, decide whether it is:
 Do not bury visible-but-out-of-scope controls in general notes. Put them in the contract's visible-control table and either acceptance criteria, explicit non-goals, or open questions. This is required for OAuth/social buttons, payment buttons, export/share controls, destructive actions, admin controls, and any control that implies an external service.
 
 Do not treat generated Figma code as implementation-ready. Use it as a visual and structural reference, then adapt it to the repo's framework, component library, tokens, and interaction patterns.
+
+## Figma Asset And Icon Discovery
+
+Before finalizing the design contract, inventory every visual asset that is not plain text, layout, or a standard CSS primitive.
+
+Required discovery:
+
+- List all icons, logos, brand marks, illustrations, photos, SVG/vector nodes, bitmap assets, and external asset URLs used by the target frames and nested instances.
+- Identify the Figma node ID, layer name, apparent source library, documentation link, and whether the asset is local, remote/library-backed, generated, or exported by `get_design_context`.
+- For icon layers, inspect names and metadata for the actual icon family, for example HugeIcon/HugeIcons, lucide, Radix Icons, custom brand icons, or unknown.
+- Do not silently substitute icon families. If Figma uses HugeIcons, either use the matching repo/library package, export the icon asset, or mark the mapping as an approved fallback.
+- Prefer repo-native icon packages only when they match the Figma source or the contract explicitly approves the substitution.
+- Prefer SVG/vector export for icons and logos. Do not rasterize icons unless the source is already bitmap or the user approves a raster fallback.
+- Download temporary MCP asset URLs needed for review into the run artifact folder when useful, but move only durable approved assets into source-controlled app asset paths.
+- Record licensing or dependency implications for new icon libraries, fonts, images, or asset packages.
+
+The design contract must include an `Asset And Icon Inventory` with an explicit decision for each asset:
+
+- **Use repo library**: a matching installed package/component exists.
+- **Add dependency**: the source library is required and not installed.
+- **Export asset**: use Figma-exported SVG/raster.
+- **Replace by approval**: use an approved alternate library or asset.
+- **Defer/omit**: not shipped in this scope.
+
+When asset source is unclear or library access is blocked, record the limitation and use the closest repo-native fallback only after noting the visual risk in the contract.
 
 ## Figma Library State Discovery
 
@@ -156,7 +209,9 @@ The contract must include:
 
 - Goal and user value.
 - Source links and screenshots inspected.
+- Scope size recommendation and approved implementation slice for large flows.
 - Figma frame inventory when applicable.
+- Asset and icon inventory, including source library and export decisions.
 - Component primitive inventory and repo mapping.
 - Figma library state discovery and component state matrix when Figma-backed components are used.
 - Flow map between frames or states.
@@ -186,7 +241,7 @@ Before spawning any subagent, state the subagent plan in the active artifact or 
 
 Use subagents for:
 
-- Read-only discovery that can run in parallel, such as Figma frame inventory, Figma library component state discovery, repo route scans, shadcn primitive mapping, external-service docs checks, or security risk enumeration.
+- Read-only discovery that can run in parallel, such as Figma frame inventory, Figma asset and icon inventory, Figma library component state discovery, repo route scans, shadcn primitive mapping, external-service docs checks, or security risk enumeration.
 - Disjoint implementation packages with clear file ownership.
 - Independent QA, accessibility, visual, or security review after integration.
 - Release preparation when it does not block active fixes.
@@ -203,6 +258,7 @@ Contract phase default:
 - Simple or single-surface change: top-level-only is acceptable; record "Subagents: not used - simple scope."
 - Non-trivial Figma-to-code, auth, data, or external-service feature: use at least one `contract-explorer` or `security-reviewer` when tooling is available.
 - Figma plus auth or external services, such as "Use Orchestrator for this auth flow" with Resend/Supabase/email delivery, should usually spawn separate read-only discovery for Figma/component mapping and repo/security/external dependency risk.
+- Figma designs with icons, brand marks, illustrations, or image assets should include asset source/export discovery or an explicit fallback before contract approval.
 - Figma designs that use nested library instances should include read-only component-state discovery or an explicit access limitation before contract approval.
 - Large or ambiguous PRD: optionally use `prd-writer` for a draft subsection, but the main agent must review, edit, and own the final contract.
 
@@ -224,8 +280,10 @@ After approval, create `implementation-plan.md` using the template in `reference
 
 Plan work as small packages with clear ownership:
 
+- Approved slice, deferred slices, and release boundary.
 - Files or modules each engineer may edit.
 - Files or modules each engineer must not edit.
+- Asset/icon usage plan, exports, dependencies, and approved substitutions.
 - Installed component primitives to reuse.
 - Missing components to add, update, or intentionally avoid.
 - Security-sensitive files, flows, data, permissions, and dependencies.
@@ -349,7 +407,9 @@ Create `qa-review.md` using the template in `references/artifact-templates.md`.
 QA must compare the actual result against:
 
 - Approved contract.
+- Approved slice boundary and deferred scope.
 - Figma screenshot or feature source.
+- Asset and icon inventory, including source library or export fallback.
 - Component primitive mapping.
 - Component state matrix and repo behavior fallback.
 - Flow transitions and validation paths.

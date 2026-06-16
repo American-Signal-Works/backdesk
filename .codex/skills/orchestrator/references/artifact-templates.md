@@ -43,6 +43,16 @@ Mode: feature | bugfix | design-polish | release
 
 - <Explicit non-goals>
 
+## Scope Size And Slice Recommendation
+
+- Recommended shape: Single issue | Parent flow with slices
+- Reason:
+- Approved implementation slice:
+
+| Slice | Goal | In | Out | Dependencies | Release boundary |
+|---|---|---|---|---|---|
+| <1> | <outcome> | <scope> | <non-goals> | <blocked by/needs> | <can release independently?> |
+
 ## Affected Surface
 
 - Routes:
@@ -69,6 +79,14 @@ Mode: feature | bugfix | design-polish | release
 | Instance/control | Instance node | Main component | Component set | Remote | Key available | Variant/property metadata | Source/result |
 |---|---|---|---|---|---|---|---|
 | <Button> | <node id> | <name> | <set name> | yes/no | yes/no | <State, Variant, Size, etc.> | <resolved/partial/blocked> |
+
+## Asset And Icon Inventory
+
+List every icon, logo, brand mark, illustration, photo, SVG/vector, bitmap, and external asset URL used by the target frames.
+
+| Asset | Figma node | Type | Source/library | Export/source decision | Destination | Notes |
+|---|---|---|---|---|---|---|
+| <layers icon> | <node id> | icon/svg | HugeIcons/lucide/custom/unknown | Use repo library/Add dependency/Export asset/Approved fallback/Defer | <path or package> | <license or visual risk> |
 
 ## Component Primitive Inventory
 
@@ -198,12 +216,28 @@ Date: <yyyy-mm-dd>
 Contract: ./design-contract.md
 Status: Draft | In progress | Complete
 
+## Approved Slice
+
+- Parent flow:
+- Slice:
+- Scope boundary:
+- Deferred slices:
+
 ## Component Plan
 
 - Existing primitives to reuse:
 - Missing primitives to add:
 - shadcn docs/search/view/dry-run commands:
 - Components intentionally not added:
+
+## Asset Plan
+
+- Icons/assets to use from repo libraries:
+- Icons/assets to export from Figma:
+- New asset/icon dependencies:
+- Approved substitutions:
+- Assets intentionally deferred:
+- Verification:
 
 ## Security Plan
 
@@ -291,7 +325,9 @@ Status: Pass | Pass with notes | Fail
 - E2E tests:
 - Build:
 - Browser/manual:
+- Approved slice boundary:
 - Figma comparison:
+- Asset/icon fidelity:
 - Component primitive mapping:
 - Flow transitions:
 - Simplification pass:
