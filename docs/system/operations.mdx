@@ -1,0 +1,78 @@
+---
+title: "Operations"
+description: "Runtime configuration, observability, tests, and known operational notes."
+---
+
+## Environment variables
+
+The Turborepo config treats these as global environment variables:
+
+```text
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY
+NEXT_PUBLIC_SITE_URL
+PLAYWRIGHT_BASE_URL
+CI
+```
+
+`NEXT_PUBLIC_SITE_URL` matters for auth emails. If it is absent, the browser auth client falls back to the current window origin when constructing `/callback`.
+
+`SUPABASE_SERVICE_ROLE_KEY` is required only for admin-only server flows and should never be exposed to client code.
+
+## Supabase
+
+Local development expects Supabase to be running through the Supabase CLI:
+
+```bash
+supabase start
+pnpm db:migrate
+pnpm db:types
+```
+
+RLS is the main data boundary. Every product table policy scopes access to the current user. Storage policies scope access to the first path segment in private buckets.
+
+## Sentry
+
+`apps/web/next.config.mjs` wraps the Next.js config with `withSentryConfig()` outside CI.
+
+In CI, the Sentry webpack wrapper is skipped to avoid long source-map generation during Playwright setup. Runtime instrumentation still loads through:
+
+- `apps/web/instrumentation.ts`
+- `apps/web/instrumentation-client.ts`
+
+## Playwright
+
+Playwright config lives in `apps/web/playwright.config.ts`.
+
+The test server behavior is:
+
+- local default: `pnpm dev`
+- CI or `PLAYWRIGHT_PROD=1`: `pnpm --filter web build && pnpm --filter web start`
+
+The config increases `NODE_OPTIONS` to `--max-old-space-size=4096` because Plate.js, emoji-mart, and Sentry instrumentation can make production builds memory-heavy.
+
+## Lighthouse CI
+
+`.lighthouserc.json` defines Lighthouse CI assertions:
+
+- performance warns below `0.85`
+- accessibility errors below `0.9`
+- best practices warn below `0.9`
+
+The current configured URLs are `/sign-in` and `/sign-up`. The live auth route is `/login`, so this config should be updated before treating Lighthouse CI as authoritative.
+
+## Mintlify docs
+
+Mintlify configuration lives in `docs/docs.json`, with MDX pages under `docs/`.
+
+Useful commands:
+
+```bash
+cd docs
+npx mintlify@latest validate
+npx mintlify@latest broken-links
+npx mintlify@latest dev
+```
+
+On this machine, `pnpm dlx mintlify@latest` failed before reaching CLI help under Node 24, while `npx mintlify@latest --help` worked.

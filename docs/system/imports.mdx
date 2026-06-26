@@ -1,0 +1,128 @@
+---
+title: "Imports"
+description: "Connection model and the current IBKR activity statement pipeline."
+---
+
+Connections import external data into generic Backdesk collections.
+
+The current connection is:
+
+```text
+ibkr-activity-statement
+```
+
+It imports Interactive Brokers Activity Statement CSV files and produces system collections named `Fills` and `Trades`.
+
+## Connection interface
+
+The connection contract lives in `apps/web/lib/connections/types.ts`.
+
+A connection defines:
+
+- `id`
+- `displayName`
+- `description`
+- `settingsSchema`
+- `defaultSettings`
+- `producedCollections`
+- `canParse(file)`
+- `parse(file, settings)`
+- optional `postProcess()`
+
+Registered connections live in `apps/web/lib/connections/index.ts`.
+
+## Import Server Action
+
+`runImport()` in `apps/web/actions/import.ts` owns the current import pipeline:
+
+1. Require a signed-in user.
+2. Read `file`, `connectionId`, and `settings` from `FormData`.
+3. Find the connection by id.
+4. Validate settings with the connection schema.
+5. Confirm the connection can parse the file.
+6. Parse the file.
+7. Ensure system collections, fields, default views, and sidebar pages exist.
+8. Upsert fills using the source external id.
+9. Load all existing fills for affected symbols.
+10. Aggregate fills to trades.
+11. Upsert trades using a stable trade identity.
+12. Record an audit row in `connection_imports`.
+13. Revalidate the app layout.
+
+## System collections
+
+The IBKR connection creates these system collections on first import:
+
+### Fills
+
+| Field | Type |
+| --- | --- |
+| Symbol | text |
+| Side | select |
+| Quantity | number |
+| Price | currency |
+| Fees | currency |
+| Executed at | datetime |
+
+### Trades
+
+| Field | Type |
+| --- | --- |
+| Symbol | text |
+| Side | select |
+| Opened at | datetime |
+| Closed at | datetime |
+| Hold duration (s) | number |
+| Quantity | number |
+| Avg entry price | currency |
+| Avg exit price | currency |
+| Gross P&L | currency |
+| Fees | currency |
+| Net P&L | currency |
+| Currency | text |
+
+System fields cannot be renamed or deleted through the normal collection Server Actions.
+
+## Deduplication
+
+Fills are upserted with:
+
+```text
+owner_type, owner_id, collection_id, source_external_id
+```
+
+The IBKR parser supplies `__external_id`, which becomes `source_external_id`.
+
+Trades use a stable identity built from:
+
+```text
+symbol|opened_at|side|opening_fill_id
+```
+
+This lets a later import update an open trade when a closing fill arrives.
+
+## Round-trip aggregation
+
+`apps/web/lib/connections/ibkr-activity-statement/aggregator.ts` groups fills by symbol and sorts them chronologically.
+
+It handles:
+
+- long and short trades
+- scale-ins
+- partial closes
+- exact closes
+- flips from long to short or short to long
+- open trades at the end of imported data
+
+Open trades have null exit and P&L fields until later fills close the position.
+
+## Adding a connection
+
+To add a new connection:
+
+1. Create a connection module under `apps/web/lib/connections/<connection-id>/`.
+2. Implement `Connection<S>`.
+3. Add the connection to `apps/web/lib/connections/index.ts`.
+4. Define produced collection specs with system fields.
+5. Add parser and post-processing tests.
+6. Confirm `runImport()` can support its pipeline or split connection-specific post-processing behind a connection hook.

@@ -61,3 +61,13 @@ rsync -a "$PWD/.codex/skills/orchestrator/" "${CODEX_HOME:-$HOME/.codex}/skills/
 
 See `docs/superpowers/specs/2026-04-28-backdesk-v1-design.md` for the full design.
 Plans live in `docs/superpowers/plans/`.
+
+## Mintlify docs
+
+Current engineering docs live in `docs/` and are configured by `docs/docs.json`.
+
+```bash
+cd docs
+npx mintlify@latest validate
+npx mintlify@latest dev
+```

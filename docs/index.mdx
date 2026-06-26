@@ -1,0 +1,48 @@
+---
+title: "Backdesk System Docs"
+description: "Current-source engineering documentation for Backdesk."
+---
+
+Backdesk is a workspace for structured data. Users create dashboard pages, collection pages, and imported system collections. The current product is generic at the platform layer, with Interactive Brokers activity statement import as the first vertical workflow.
+
+These docs describe the system implemented in this repository today. The older v1 product direction remains in `docs/superpowers/specs/2026-04-28-backdesk-v1-design.md`, but these Mintlify pages should be treated as the current engineering reference.
+
+## Current stack
+
+- Next.js 15 App Router in `apps/web`
+- React 19, shadcn/ui, Tailwind CSS v4, and Plate.js for rich dashboard editing
+- Supabase Auth, Postgres, Storage, and Row-Level Security
+- Turborepo and pnpm workspaces
+- Vitest for unit tests, Playwright for browser tests, Lighthouse CI for quality gates
+- Sentry and Vercel Analytics instrumentation
+
+## Main domains
+
+- **Pages:** Sidebar entities with either `dashboard` or `collection` page type.
+- **Dashboards:** Plate documents stored as JSON on `pages.document`.
+- **Collections:** Typed field definitions plus JSONB row data.
+- **Blocks:** Generic dashboard blocks that read from collections.
+- **Connections:** Importers that create or update system collections.
+- **Settings:** Account, profile, appearance, and connections surfaces.
+
+## Source map
+
+| Area | Main files |
+| --- | --- |
+| App routes | `apps/web/app` |
+| Page actions | `apps/web/actions/pages.ts` |
+| Collection actions | `apps/web/actions/collections.ts` |
+| Import pipeline | `apps/web/actions/import.ts` |
+| Supabase clients | `apps/web/lib/supabase` |
+| Collection runtime | `apps/web/lib/collections` |
+| Connections | `apps/web/lib/connections` |
+| Editor blocks | `apps/web/components/editor` |
+| Database schema | `supabase/migrations` |
+
+## Where to go next
+
+- Start with [Architecture](/system/architecture) for the runtime model.
+- Use [Data Model](/system/data-model) when changing tables or RLS.
+- Use [Collections](/system/collections) when changing collection pages, field types, row editing, filters, sorts, or dashboard block reads.
+- Use [Imports](/system/imports) when changing the IBKR importer or adding a new connection.
+- Use [Development](/development) for local setup and checks.

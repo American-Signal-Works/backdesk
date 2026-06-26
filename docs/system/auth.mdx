@@ -1,0 +1,89 @@
+---
+title: "Authentication"
+description: "Current Supabase auth flow, middleware behavior, and session handling."
+---
+
+Backdesk uses Supabase Auth with SSR cookie support from `@supabase/ssr`.
+
+## Login UI
+
+The active login route is `/login`.
+
+`apps/web/components/auth/LoginAuthFlow.tsx` implements a three-step flow:
+
+1. Email entry.
+2. Link-sent state with resend support.
+3. Success state after callback completion.
+
+Email validation and normalization live in `apps/web/lib/auth/validation.ts`.
+
+Google and Microsoft buttons are visible but disabled in the current UI.
+
+## Magic link request
+
+The browser calls `requestEmailMagicLink()` from `apps/web/lib/auth/client.ts`.
+
+That helper calls:
+
+```ts
+createClient().auth.signInWithOtp({
+  email,
+  options: {
+    emailRedirectTo: getEmailRedirectTo(),
+  },
+})
+```
+
+`getEmailRedirectTo()` uses `NEXT_PUBLIC_SITE_URL` when set, otherwise it falls back to `window.location.origin`, and appends `/callback`.
+
+## Callback completion
+
+`/callback` is implemented by `apps/web/app/(auth)/callback/page.tsx`.
+
+The callback page supports multiple Supabase callback shapes:
+
+- `code` query parameter, completed with `exchangeCodeForSession()`
+- `token_hash` query parameter, completed with `verifyOtp()`
+- `access_token` and `refresh_token` hash parameters, completed with `setSession()`
+- an already-present session from `getSession()`
+
+On success, the route replaces the URL with:
+
+```text
+/login?auth=success
+```
+
+On failure, it replaces the URL with:
+
+```text
+/login?error=callback_failed
+```
+
+## Middleware
+
+`apps/web/middleware.ts` refreshes the Supabase session and owns route-level redirects.
+
+Protected routes are:
+
+- `/`
+- `/p/*`
+- `/c/*`
+- `/settings*`
+
+Unauthenticated users on protected routes are redirected to `/login`.
+
+Authenticated users visiting `/login` are redirected to `/`, except when the URL is `/login?auth=success`.
+
+If `/login?auth=success` is reached without a user session, middleware removes `auth=success` and redirects back to `/login`.
+
+## Server clients
+
+Use the right Supabase client for the runtime:
+
+| Runtime | File | Purpose |
+| --- | --- | --- |
+| Server Components and Server Actions | `apps/web/lib/supabase/server.ts` | Authenticated Supabase client backed by Next cookies |
+| Browser components | `apps/web/lib/supabase/browser.ts` | Browser Supabase client for auth interactions |
+| Admin-only server actions | `apps/web/lib/supabase/admin.ts` | Service-role client that bypasses RLS |
+
+The admin client must stay server-only.

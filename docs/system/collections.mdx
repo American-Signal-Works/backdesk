@@ -1,0 +1,109 @@
+---
+title: "Collections"
+description: "How collection pages, fields, rows, views, and dashboard reads work."
+---
+
+Collections are the core generic data primitive in Backdesk. User-created collections and connection-managed system collections share the same tables and runtime model.
+
+## Collection pages
+
+Creating a collection page through `createPage()` in `apps/web/actions/pages.ts` creates:
+
+1. A row in `collections`.
+2. A `pages` row with `page_type = 'collection'`.
+3. A default `collection_views` row.
+
+The collection page route is `/c/[pageId]`.
+
+## Fields
+
+Fields are stored in `collection_fields` and manipulated by Server Actions in `apps/web/actions/collections.ts`.
+
+Supported field types are:
+
+- `text`
+- `number`
+- `currency`
+- `date`
+- `datetime`
+- `select`
+- `multi_select`
+- `checkbox`
+
+`addField()` creates a field with a `sort_index` spaced by 1000. `renameField()` and `deleteField()` reject system fields.
+
+Field defaults and value normalization live in:
+
+- `apps/web/lib/collections/fields.ts`
+- `apps/web/lib/collections/types.ts`
+
+## Rows
+
+Rows are stored in `collection_rows`.
+
+`addRow()` loads the collection fields, builds defaults for every field, overlays submitted values, and inserts the row with `source = 'user'`.
+
+`updateRowField()`:
+
+1. Loads the field type.
+2. Normalizes the incoming value.
+3. Reads the row JSON.
+4. Writes a new `data` object with the updated field id.
+
+`deleteRow()` deletes the row.
+
+## Views
+
+`collection_views.config` stores list-view state:
+
+```json
+{
+  "sort": [],
+  "filters": [],
+  "visibleFields": []
+}
+```
+
+The current database constrains `collection_views.type` to `list`.
+
+## Runtime collection interface
+
+`apps/web/lib/collections/collection.ts` defines a `Collection` class used by route handlers and dashboard data hooks.
+
+The runtime supports:
+
+- loading collection metadata and fields
+- listing rows
+- counting rows
+- loading a single row
+- aggregating rows
+
+Filters and sorts are applied in JavaScript after rows are loaded from Supabase. This is acceptable for the current v1 scale, but larger datasets should push filtering, sorting, and pagination into Postgres.
+
+## Aggregates
+
+`Collection.aggregate()` supports:
+
+- `count`
+- `sum`
+- `avg`
+- `min`
+- `max`
+
+Aggregates can optionally group by field ids. Currency fields contribute their `amount` value.
+
+The aggregate API is exposed at `POST /api/aggregate`.
+
+## Dashboard blocks
+
+Generic dashboard blocks read from collections rather than domain-specific tables.
+
+Important files:
+
+- `apps/web/components/editor/blocks/CardBlockElement.tsx`
+- `apps/web/components/editor/blocks/ChartBlockElement.tsx`
+- `apps/web/components/editor/blocks/TableBlockElement.tsx`
+- `apps/web/components/editor/blocks/RowBlockElement.tsx`
+- `apps/web/components/editor/data-hooks/useMetric.ts`
+- `apps/web/components/editor/data-hooks/useChartData.ts`
+- `apps/web/components/editor/data-hooks/useRowDetail.ts`

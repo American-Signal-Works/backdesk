@@ -1,0 +1,125 @@
+---
+title: "Data Model"
+description: "Current Supabase tables, ownership model, and RLS boundaries."
+---
+
+The database schema is defined by SQL migrations in `supabase/migrations`.
+
+## Ownership model
+
+Most product tables use:
+
+```sql
+owner_type text
+owner_id uuid
+```
+
+Current policies require:
+
+```sql
+owner_type = 'user' AND owner_id = auth.uid()
+```
+
+The schema allows `owner_type = 'workspace'` for future team ownership, but workspace ownership is not active in the current RLS policies.
+
+`profiles` is account-scoped and uses `user_id` directly because it belongs to an auth user rather than a workspace.
+
+## Core tables
+
+| Table | Purpose |
+| --- | --- |
+| `profiles` | Display name, avatar path, timezone, theme mode, and accent |
+| `pages` | Sidebar entities and dashboard documents |
+| `collections` | Collection metadata and connection ownership |
+| `collection_fields` | Typed field definitions for each collection |
+| `collection_rows` | JSONB row data keyed by field id |
+| `collection_views` | Saved list-view config |
+| `connection_imports` | Import audit records |
+| `storage.objects` | Backing storage for attachments and avatars |
+
+## Pages
+
+`pages.page_type` is constrained to `dashboard` or `collection`.
+
+Dashboard pages have:
+
+```text
+document != null
+collection_id = null
+```
+
+Collection pages have:
+
+```text
+document = null
+collection_id != null
+```
+
+`pages.deleted_at` is a soft-delete marker. Normal list queries filter it out.
+
+`pages.updated_at` is maintained by the `touch_updated_at()` trigger and is used for optimistic concurrency when saving dashboard documents.
+
+## Collections
+
+`collections` contains both user-created collections and system collections created by connections.
+
+Important columns:
+
+- `is_system`: marks connection-managed collections.
+- `managed_by_connection`: stores the connection id, such as `ibkr-activity-statement`.
+- `deleted_at`: soft-delete marker.
+
+## Fields and rows
+
+`collection_fields` defines user-facing field metadata. Supported field types are:
+
+- `text`
+- `number`
+- `currency`
+- `date`
+- `datetime`
+- `select`
+- `multi_select`
+- `checkbox`
+
+Rows are stored in `collection_rows.data` as JSONB:
+
+```json
+{
+  "<field-id>": "value"
+}
+```
+
+Currency values use an object:
+
+```json
+{
+  "amount": 123.45,
+  "currency_code": "USD"
+}
+```
+
+Connection-imported rows set `source = connection:<id>` and a stable `source_external_id`.
+
+## Deduplication
+
+`collection_rows_dedup_idx` is a full unique index over:
+
+```text
+owner_type, owner_id, collection_id, source_external_id
+```
+
+This supports Supabase/PostgREST `.upsert({ onConflict })` during imports. User-created rows can still have `source_external_id = null`; PostgreSQL unique indexes allow multiple null values.
+
+## Storage buckets
+
+The migrations create private `attachments` and `avatars` buckets. Storage policies allow users to read, insert, and delete only paths whose first path segment is their `auth.uid()`.
+
+## Source files
+
+- `supabase/migrations/20260428000001_profiles.sql`
+- `supabase/migrations/20260429000001_pages.sql`
+- `supabase/migrations/20260429000002_collections.sql`
+- `supabase/migrations/20260430000002_connection_imports.sql`
+- `supabase/migrations/20260430000003_fix_collection_rows_dedup_idx.sql`
+- `supabase/migrations/20260430000004_avatars_bucket.sql`

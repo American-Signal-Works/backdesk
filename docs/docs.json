@@ -1,0 +1,34 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "Backdesk",
+  "description": "Engineering documentation for the current Backdesk system.",
+  "colors": {
+    "primary": "#111827",
+    "light": "#111827",
+    "dark": "#F9FAFB"
+  },
+  "navigation": {
+    "groups": [
+      {
+        "group": "Start",
+        "pages": [
+          "index",
+          "development"
+        ]
+      },
+      {
+        "group": "System",
+        "pages": [
+          "system/architecture",
+          "system/data-model",
+          "system/auth",
+          "system/collections",
+          "system/imports",
+          "system/api",
+          "system/operations"
+        ]
+      }
+    ]
+  }
+}

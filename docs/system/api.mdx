@@ -1,0 +1,111 @@
+---
+title: "API Routes"
+description: "Current route handlers used by the app and editor blocks."
+---
+
+Backdesk primarily uses Server Components for reads and Server Actions for writes. API route handlers exist for collection and aggregate reads that are convenient for client-side hooks and editor blocks.
+
+All current API routes require an authenticated Supabase user. Unauthenticated requests return `401`.
+
+## GET /api/collections
+
+Implemented in `apps/web/app/api/collections/route.ts`.
+
+Returns visible collections for the current user and a compact field list for each collection.
+
+Response shape:
+
+```json
+[
+  {
+    "id": "collection-id",
+    "name": "Trades",
+    "fields": [
+      {
+        "id": "field-id",
+        "name": "Net P&L",
+        "type": "currency",
+        "collection_id": "collection-id"
+      }
+    ]
+  }
+]
+```
+
+## GET /api/collections/:id/fields
+
+Implemented in `apps/web/app/api/collections/[id]/fields/route.ts`.
+
+Returns all fields for a collection owned by the current user, ordered by `sort_index`.
+
+## GET /api/collections/:id/rows
+
+Implemented in `apps/web/app/api/collections/[id]/rows/route.ts`.
+
+Returns rows for a collection owned by the current user.
+
+Query parameters:
+
+| Parameter | Default | Purpose |
+| --- | --- | --- |
+| `limit` | `100` | Maximum number of rows to return |
+
+## GET /api/collections/:id/rows/:rowId
+
+Implemented in `apps/web/app/api/collections/[id]/rows/[rowId]/route.ts`.
+
+Returns one row from a collection owned by the current user, or `null` if it does not exist.
+
+## POST /api/aggregate
+
+Implemented in `apps/web/app/api/aggregate/route.ts`.
+
+Request body:
+
+```json
+{
+  "collectionId": "collection-id",
+  "metric": {
+    "kind": "sum",
+    "fieldId": "field-id"
+  },
+  "groupBy": ["field-id"]
+}
+```
+
+Supported metric kinds:
+
+- `count`
+- `sum`
+- `avg`
+- `min`
+- `max`
+
+Ungrouped response:
+
+```json
+{
+  "value": 123
+}
+```
+
+Grouped response:
+
+```json
+{
+  "groups": [
+    {
+      "key": {
+        "field-id": "AAPL"
+      },
+      "value": 123
+    }
+  ]
+}
+```
+
+## Error behavior
+
+The aggregate route validates request bodies with Zod. Invalid input returns `400`. Runtime aggregate failures return `500` with an error message.
+
+Collection read routes currently return empty arrays when no rows or fields are found.

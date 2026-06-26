@@ -1,0 +1,71 @@
+---
+title: "Development"
+description: "Local setup, commands, and contribution workflow for Backdesk."
+---
+
+## Prerequisites
+
+- Node.js 20 or newer
+- pnpm 10.x, matching the `packageManager` field in `package.json`
+- Docker
+- Supabase CLI
+- A configured `apps/web/.env.local`
+
+## Install and run
+
+```bash
+pnpm install
+supabase start
+pnpm db:types
+cp .env.example apps/web/.env.local
+pnpm dev
+```
+
+After editing `apps/web/.env.local`, visit `http://localhost:3000`.
+
+## Common commands
+
+```bash
+pnpm dev
+pnpm build
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm test:e2e
+pnpm db:migrate
+pnpm db:types
+```
+
+`pnpm test:e2e` runs Playwright through `apps/web/playwright.config.ts`. In CI or when `PLAYWRIGHT_PROD=1`, Playwright builds the app and starts a production Next.js server before running tests.
+
+## Supabase workflow
+
+Schema changes live in `supabase/migrations`. After applying migrations locally, regenerate the typed Supabase client:
+
+```bash
+pnpm db:types
+```
+
+Generated types are written to `apps/web/lib/supabase/types.ts`.
+
+## Documentation workflow
+
+Mintlify docs live in `docs/`. Use the Mintlify CLI from that directory:
+
+```bash
+cd docs
+npx mintlify@latest validate
+npx mintlify@latest dev
+```
+
+If `pnpm dlx mintlify@latest` fails locally under Node 24, use `npx mintlify@latest`. That path was verified to expose `dev`, `validate`, `broken-links`, `status`, and related commands on this machine.
+
+## Codex workflow
+
+Backdesk keeps repo-owned Codex workflow instructions in `AGENTS.md` and `.codex/skills/orchestrator/SKILL.md`. For Figma-to-implementation work, use the Orchestrator skill and keep workflow artifacts under:
+
+```text
+docs/codex/runs/<yyyy-mm-dd-feature-slug>/
+```
+
+The design contract is an approval gate. Implementation should start only after the user approves the contract.

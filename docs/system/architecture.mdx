@@ -1,0 +1,71 @@
+---
+title: "Architecture"
+description: "How the current Backdesk app is assembled at runtime."
+---
+
+Backdesk is a Turborepo with one application package, `apps/web`, and shared internal packages under `packages/`.
+
+```text
+Browser
+  -> Next.js App Router on Vercel or local dev
+    -> Server Components for reads
+    -> Server Actions for writes
+    -> Route handlers for collection and aggregate APIs
+      -> Supabase Auth, Postgres, Storage, and RLS
+```
+
+## Application package
+
+`apps/web` owns the product runtime:
+
+- `app/(auth)` contains login and callback routes.
+- `app/(app)` contains authenticated product routes.
+- `app/api` exposes JSON endpoints used by collection-aware blocks and UI.
+- `actions` contains Server Actions for writes.
+- `components` contains shell, sidebar, settings, collection, auth, and editor UI.
+- `lib` contains domain logic for auth, collections, connections, Supabase clients, templates, and upload helpers.
+
+## Route structure
+
+| Route | Purpose |
+| --- | --- |
+| `/login` | Email magic-link login UI and post-callback success state |
+| `/callback` | Client-side Supabase callback completion |
+| `/` | Authenticated empty/dashboard landing route |
+| `/p/[pageId]` | Dashboard page editor |
+| `/c/[pageId]` | Collection page list view |
+| `/settings/account` | Password, sign out, delete account |
+| `/settings/profile` | Display name, avatar, timezone |
+| `/settings/appearance` | Theme mode and accent |
+| `/settings/connections` | Connection import surface |
+
+## Data access pattern
+
+The preferred app pattern is:
+
+- Server Components read with `createClient()` from `apps/web/lib/supabase/server.ts`.
+- Server Actions write with the same server Supabase client.
+- Browser-only auth calls use `apps/web/lib/supabase/browser.ts`.
+- Admin-only actions use `apps/web/lib/supabase/admin.ts`, which imports `server-only` and requires `SUPABASE_SERVICE_ROLE_KEY`.
+
+Normal app traffic does not use API routes for CRUD writes. Existing route handlers are read-oriented support endpoints for collections and aggregate reads.
+
+## Product primitives
+
+Backdesk has a generic core:
+
+- Pages are top-level sidebar entities.
+- A page is either a dashboard or a collection page.
+- Dashboards store a Plate document in `pages.document`.
+- Collection pages point at a `collections` row through `pages.collection_id`.
+- Blocks query collections rather than domain-specific tables.
+- Connections produce managed collections through the same collection primitive.
+
+The current vertical is trading. Trading-specific code is isolated to the IBKR connection, parser, round-trip aggregator, and trading templates.
+
+## Current caveats
+
+- Collection filtering and sorting are applied in JavaScript after loading rows through the collection runtime.
+- Import jobs run synchronously in a Server Action.
+- Multi-tenant database columns support `owner_type = 'workspace'`, but the current RLS policies only permit user ownership.
+- The active auth UI is email magic link; social buttons are present but disabled.
