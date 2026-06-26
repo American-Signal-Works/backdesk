@@ -4,9 +4,9 @@
   "name": "Backdesk",
   "description": "Engineering documentation for the current Backdesk system.",
   "colors": {
-    "primary": "#111827",
-    "light": "#111827",
-    "dark": "#F9FAFB"
+    "primary": "#16A34A",
+    "light": "#07C983",
+    "dark": "#15803D"
   },
   "navigation": {
     "groups": [
