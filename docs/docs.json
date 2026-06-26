@@ -1,8 +1,8 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "Backdesk",
-  "description": "Engineering documentation for the current Backdesk system.",
+  "name": "Product docs",
+  "description": "Engineering documentation for the current system.",
   "colors": {
     "primary": "#16A34A",
     "light": "#07C983",

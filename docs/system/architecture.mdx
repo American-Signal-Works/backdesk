@@ -1,9 +1,9 @@
 ---
 title: "Architecture"
-description: "How the current Backdesk app is assembled at runtime."
+description: "How the current app is assembled at runtime."
 ---
 
-Backdesk is a Turborepo with one application package, `apps/web`, and shared internal packages under `packages/`.
+The app is a Turborepo with one application package, `apps/web`, and shared internal packages under `packages/`.
 
 ```text
 Browser
@@ -52,7 +52,7 @@ Normal app traffic does not use API routes for CRUD writes. Existing route handl
 
 ## Product primitives
 
-Backdesk has a generic core:
+The product has a generic core:
 
 - Pages are top-level sidebar entities.
 - A page is either a dashboard or a collection page.
