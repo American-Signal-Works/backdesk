@@ -6,16 +6,23 @@ import {
   signOutCurrentSession,
 } from "./client"
 import { createClient } from "@/lib/supabase/browser"
+import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 
 vi.mock("@/lib/supabase/browser", () => ({
   createClient: vi.fn(),
 }))
 
+vi.mock("@supabase/supabase-js", () => ({
+  createClient: vi.fn(),
+}))
+
 const createClientMock = vi.mocked(createClient)
+const createSupabaseClientMock = vi.mocked(createSupabaseClient)
 
 describe("auth client helpers", () => {
   beforeEach(() => {
     createClientMock.mockReset()
+    createSupabaseClientMock.mockReset()
   })
 
   afterEach(() => {
@@ -23,7 +30,7 @@ describe("auth client helpers", () => {
   })
 
   it("returns errors instead of throwing when magic link requests fail at the network layer", async () => {
-    createClientMock.mockReturnValue({
+    createSupabaseClientMock.mockReturnValue({
       auth: {
         signInWithOtp: vi.fn().mockRejectedValue(new Error("fetch failed")),
       },
@@ -37,11 +44,13 @@ describe("auth client helpers", () => {
 
   it("requests email magic links with callback and sign-up intent", async () => {
     vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://usebackdesk.com")
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project.supabase.co")
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "anon-key")
     const signInWithOtp = vi.fn().mockResolvedValue({
       data: {},
       error: null,
     })
-    createClientMock.mockReturnValue({
+    createSupabaseClientMock.mockReturnValue({
       auth: {
         signInWithOtp,
       },
@@ -59,6 +68,18 @@ describe("auth client helpers", () => {
         shouldCreateUser: true,
       },
     })
+    expect(createSupabaseClientMock).toHaveBeenCalledWith(
+      "https://project.supabase.co",
+      "anon-key",
+      {
+        auth: {
+          autoRefreshToken: false,
+          detectSessionInUrl: false,
+          flowType: "implicit",
+          persistSession: false,
+        },
+      }
+    )
   })
 
   it("starts Google sign-on through Supabase OAuth", async () => {
