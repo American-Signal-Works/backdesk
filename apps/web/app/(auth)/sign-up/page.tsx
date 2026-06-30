@@ -1,23 +1,21 @@
 import { LoginAuthFlow } from "@/components/auth/LoginAuthFlow"
 
-type LoginPageProps = {
+type SignUpPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>
 }
 
-export default async function LoginPage({ searchParams }: LoginPageProps) {
+export default async function SignUpPage({ searchParams }: SignUpPageProps) {
   const params = await searchParams
-  const auth = Array.isArray(params?.auth) ? params.auth[0] : params?.auth
   const error = Array.isArray(params?.error) ? params.error[0] : params?.error
 
   return (
     <LoginAuthFlow
       initialFormMessage={
         error === "callback_failed"
-          ? "We couldn't complete sign in. Try again."
+          ? "We couldn't complete sign up. Try again."
           : null
       }
-      initialStep={auth === "success" ? "success" : "email"}
-      mode="sign-in"
+      mode="sign-up"
     />
   )
 }

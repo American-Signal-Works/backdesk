@@ -40,6 +40,9 @@ supabase/.temp
 # superpowers (brainstorm scratch — already exists)
 .superpowers/
 
+# Codex workflow artifacts
+docs/codex/runs/
+
 # vercel
 .vercel
 

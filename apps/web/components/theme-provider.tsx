@@ -7,18 +7,42 @@ function ThemeProvider({
   children,
   ...props
 }: React.ComponentProps<typeof NextThemesProvider>) {
+  const defaultTheme =
+    typeof props.defaultTheme === "string" ? props.defaultTheme : "system"
+
   return (
     <NextThemesProvider
       attribute="class"
-      defaultTheme="system"
+      defaultTheme={defaultTheme}
       enableSystem
       disableTransitionOnChange
       {...props}
     >
+      <ThemePreferenceSync theme={defaultTheme} />
       <ThemeHotkey />
       {children}
     </NextThemesProvider>
   )
+}
+
+function isThemeMode(value: string): value is "light" | "dark" | "system" {
+  return value === "light" || value === "dark" || value === "system"
+}
+
+function ThemePreferenceSync({ theme }: { theme: string }) {
+  const { setTheme } = useTheme()
+  const hasSynced = React.useRef(false)
+
+  React.useEffect(() => {
+    if (hasSynced.current || !isThemeMode(theme)) {
+      return
+    }
+
+    hasSynced.current = true
+    setTheme(theme)
+  }, [setTheme, theme])
+
+  return null
 }
 
 function isTypingTarget(target: EventTarget | null) {

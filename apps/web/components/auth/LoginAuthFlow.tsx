@@ -4,64 +4,83 @@ import {
   useEffect,
   useRef,
   useState,
-  type CSSProperties,
+  type ComponentType,
+  type ComponentProps,
   type FormEvent,
+  type ReactNode,
+  type RefObject,
 } from "react"
-import Image from "next/image"
+import Link from "next/link"
+import { AiMagicIcon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { LogOut } from "lucide-react"
 
-import { requestEmailMagicLink, signOutCurrentSession } from "@/lib/auth/client"
+import {
+  requestEmailMagicLink,
+  requestOAuthSignIn,
+  signOutCurrentSession,
+  type OAuthProvider,
+} from "@/lib/auth/client"
 import { getEmailValidationError, normalizeEmail } from "@/lib/auth/validation"
 import { Button } from "@workspace/ui/components/button"
+import { Field, FieldGroup, FieldLabel } from "@workspace/ui/components/field"
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@workspace/ui/components/card"
-import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from "@workspace/ui/components/field"
-import { Input } from "@workspace/ui/components/input"
-import { Separator } from "@workspace/ui/components/separator"
+  InputGroup,
+  InputGroupInput,
+} from "@workspace/ui/components/input-group"
 import { Spinner } from "@workspace/ui/components/spinner"
 import { cn } from "@workspace/ui/lib/utils"
 
 type AuthStep = "email" | "link" | "success"
-type PendingAction = "send" | "resend" | "logout" | null
+type AuthMode = "sign-in" | "sign-up"
+type SocialProvider = "google" | "microsoft"
+type PendingAction = "send" | "logout" | SocialProvider | null
 
 const SOCIAL_LOGIN_BUTTONS = [
   {
-    label: "Login with Google",
-    title: "Google login is not available yet",
+    icon: GoogleIcon,
+    provider: "google",
+    oauthProvider: "google",
+    providerLabel: "Google",
   },
   {
-    label: "Login with Microsoft",
-    title: "Microsoft login is not available yet",
+    icon: MicrosoftIcon,
+    provider: "microsoft",
+    oauthProvider: "azure",
+    providerLabel: "Microsoft",
   },
-]
+] satisfies Array<{
+  icon: ComponentType<ComponentProps<"svg">>
+  provider: SocialProvider
+  oauthProvider: OAuthProvider
+  providerLabel: string
+}>
 
-const AUTH_THEME_STYLE = {
-  "--primary": "oklch(0.922 0 0)",
-  "--primary-foreground": "oklch(0.205 0 0)",
-  "--ring": "oklch(0.922 0 0)",
-} as CSSProperties
+const authSurfaceClass =
+  "h-10 rounded-[10px] border-border bg-secondary text-secondary-foreground shadow-none hover:bg-accent hover:text-accent-foreground focus-visible:border-ring focus-visible:ring-ring/45 dark:border-transparent dark:bg-[#18191A] dark:text-[#F0ECE6] dark:hover:bg-[#202123] dark:hover:text-[#F0ECE6] dark:focus-visible:border-[#3B3D3F] dark:focus-visible:ring-[#F0ECE6]/25"
+
+const authPrimaryClass =
+  "auth-primary-button h-10 rounded-[10px] bg-primary text-primary-foreground shadow-none hover:bg-primary/90 hover:text-primary-foreground focus-visible:border-ring focus-visible:ring-ring/45 dark:bg-[#F0ECE6] dark:text-[#111111] dark:hover:bg-[#E7E1D8] dark:hover:text-[#111111] dark:focus-visible:border-[#F0ECE6] dark:focus-visible:ring-[#F0ECE6]/25"
+
+const authTextSecondaryClass = "text-muted-foreground dark:text-[#A8A29E]"
 
 export function LoginAuthFlow({
   initialStep = "email",
+  initialFormMessage = null,
+  mode = "sign-in",
 }: {
   initialStep?: AuthStep
+  initialFormMessage?: string | null
+  mode?: AuthMode
 } = {}) {
   const [step, setStep] = useState<AuthStep>(initialStep)
   const [pendingAction, setPendingAction] = useState<PendingAction>(null)
   const [email, setEmail] = useState("")
   const [submittedEmail, setSubmittedEmail] = useState("")
   const [emailError, setEmailError] = useState<string | null>(null)
-  const [formMessage, setFormMessage] = useState<string | null>(null)
+  const [formMessage, setFormMessage] = useState<string | null>(
+    initialFormMessage
+  )
   const [resendCooldown, setResendCooldown] = useState(0)
 
   const emailInputRef = useRef<HTMLInputElement>(null)
@@ -69,6 +88,11 @@ export function LoginAuthFlow({
   useEffect(() => {
     if (step === "email") {
       emailInputRef.current?.focus()
+      return
+    }
+
+    if (step === "link") {
+      emailInputRef.current?.blur()
     }
   }, [step])
 
@@ -78,14 +102,13 @@ export function LoginAuthFlow({
     }
 
     const timeout = window.setTimeout(() => {
-      setResendCooldown((current) => Math.max(0, current - 1))
-    }, 1000)
+      setResendCooldown(0)
+    }, resendCooldown * 1000)
 
     return () => window.clearTimeout(timeout)
   }, [resendCooldown])
 
   const isSending = pendingAction === "send"
-  const isResending = pendingAction === "resend"
   const isSigningOut = pendingAction === "logout"
 
   async function handleEmailSubmit(event: FormEvent<HTMLFormElement>) {
@@ -105,46 +128,46 @@ export function LoginAuthFlow({
     setEmailError(null)
     setFormMessage(null)
 
-    const { error } = await requestEmailMagicLink(nextEmail)
+    const { error } = await requestEmailMagicLink(nextEmail, {
+      shouldCreateUser: mode === "sign-up",
+    })
 
     setPendingAction(null)
 
     if (error) {
-      setEmailError("We couldn't send a sign-in link. Try again in a moment.")
+      setEmailError("We couldn't send a magic link. Try again in a moment.")
       emailInputRef.current?.focus()
       return
     }
 
     setSubmittedEmail(nextEmail)
+    setEmail(nextEmail)
+    setResendCooldown(30)
+    emailInputRef.current?.blur()
     setStep("link")
   }
 
-  async function handleResend() {
-    if (!submittedEmail || resendCooldown > 0) {
-      return
-    }
-
-    setPendingAction("resend")
+  async function handleProviderSignIn(
+    provider: OAuthProvider,
+    providerId: SocialProvider,
+    providerLabel: string
+  ) {
+    setPendingAction(providerId)
+    setEmailError(null)
     setFormMessage(null)
 
-    const { error } = await requestEmailMagicLink(submittedEmail)
+    const { error } = await requestOAuthSignIn(provider)
 
     setPendingAction(null)
 
     if (error) {
-      setFormMessage("We couldn't resend the link. Try again shortly.")
+      setFormMessage(
+        `We couldn't start ${providerLabel} sign-${mode === "sign-up" ? "up" : "in"}. Try again.`
+      )
       return
     }
 
-    setResendCooldown(30)
-    setFormMessage("A new sign-in link was sent.")
-  }
-
-  function handleUseAnotherEmail() {
-    setSubmittedEmail("")
-    setFormMessage(null)
-    setResendCooldown(0)
-    setStep("email")
+    setFormMessage(`Redirecting to ${providerLabel}...`)
   }
 
   async function handleLogout() {
@@ -163,39 +186,51 @@ export function LoginAuthFlow({
     setSubmittedEmail("")
     setEmail("")
     setEmailError(null)
+    window.history.replaceState(null, "", "/login")
     setStep("email")
   }
 
   return (
     <main
-      className="min-h-svh bg-muted text-foreground"
-      style={AUTH_THEME_STYLE}
+      className="min-h-svh bg-background text-foreground dark:bg-[#111111] dark:text-[#F0ECE6]"
+      data-auth-shell="true"
     >
-      <section className="flex min-h-svh items-center justify-center px-4 py-10">
-        <div className="flex w-full flex-col items-center gap-6">
-          <BrandMark />
-          <AuthCard step={step}>
-            {step === "email" && (
+      <section
+        className={cn(
+          "flex min-h-svh justify-center px-4 pb-10",
+          step === "success" ? "pt-56 md:pt-[470px]" : "pt-36 md:pt-[336px]"
+        )}
+      >
+        <div
+          data-auth-stack="true"
+          data-auth-step={step}
+          className="flex w-full max-w-96 flex-col items-start gap-6"
+        >
+          <div
+            className={cn(
+              "flex w-full flex-col",
+              step === "success" ? "gap-4" : "gap-5"
+            )}
+          >
+            {(step === "email" || step === "link") && (
               <EmailStep
-                email={email}
+                email={
+                  step === "link" && resendCooldown > 0 ? submittedEmail : email
+                }
                 emailError={emailError}
+                formMessage={formMessage}
+                isMagicLinkSent={step === "link" && resendCooldown > 0}
                 isSending={isSending}
+                mode={mode}
                 onEmailChange={(value) => {
                   setEmail(value)
                   setEmailError(null)
+                  setFormMessage(null)
                 }}
+                onProviderSignIn={handleProviderSignIn}
                 onSubmit={handleEmailSubmit}
+                pendingAction={pendingAction}
                 inputRef={emailInputRef}
-              />
-            )}
-            {step === "link" && (
-              <MagicLinkStep
-                formMessage={formMessage}
-                isResending={isResending}
-                resendCooldown={resendCooldown}
-                onResend={handleResend}
-                onUseAnotherEmail={handleUseAnotherEmail}
-                submittedEmail={submittedEmail}
               />
             )}
             {step === "success" && (
@@ -205,190 +240,214 @@ export function LoginAuthFlow({
                 onLogout={handleLogout}
               />
             )}
-          </AuthCard>
-          {step === "email" && <TermsCopy />}
+          </div>
+          {(step === "email" || step === "link") && <TermsCopy mode={mode} />}
         </div>
       </section>
     </main>
   )
 }
 
-function BrandMark() {
-  return (
-    <div className="flex items-center gap-2 text-sm font-medium">
-      <Image
-        alt=""
-        aria-hidden="true"
-        className="size-6 shrink-0"
-        height={24}
-        priority
-        src="/backdesk-mark.png"
-        width={24}
-      />
-      Backdesk
-    </div>
-  )
-}
-
-function AuthCard({
+function AuthHeader({
   children,
-  step,
+  title,
 }: {
-  children: React.ReactNode
-  step: AuthStep
+  children?: ReactNode
+  title: string
 }) {
   return (
-    <Card
-      className={cn(
-        "w-full gap-0 rounded-lg border border-border/70 bg-background py-0 shadow-none ring-0",
-        step === "email" ? "max-w-sm" : "max-w-xs"
+    <div className="flex w-full flex-col items-start gap-2 text-left">
+      <h1 className="text-2xl leading-none font-normal">{title}</h1>
+      {children && (
+        <div className={cn("text-sm leading-5", authTextSecondaryClass)}>
+          {children}
+        </div>
       )}
-    >
-      {children}
-    </Card>
+    </div>
   )
 }
 
 function EmailStep({
   email,
   emailError,
+  formMessage,
   inputRef,
+  isMagicLinkSent,
   isSending,
+  mode,
   onEmailChange,
+  onProviderSignIn,
   onSubmit,
+  pendingAction,
 }: {
   email: string
   emailError: string | null
-  inputRef: React.RefObject<HTMLInputElement | null>
+  formMessage: string | null
+  inputRef: RefObject<HTMLInputElement | null>
+  isMagicLinkSent: boolean
   isSending: boolean
+  mode: AuthMode
   onEmailChange: (value: string) => void
+  onProviderSignIn: (
+    provider: OAuthProvider,
+    providerId: SocialProvider,
+    providerLabel: string
+  ) => void
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
+  pendingAction: PendingAction
 }) {
+  const actionLabel = mode === "sign-up" ? "Sign up" : "Sign in"
+  const isAnyProviderPending =
+    pendingAction === "google" || pendingAction === "microsoft"
+  const isFormBusy = isSending || isAnyProviderPending
+
   return (
     <>
-      <CardHeader className="items-center px-6 pt-6 pb-5 text-center">
-        <CardTitle className="text-xl leading-tight font-semibold">
-          Welcome back
-        </CardTitle>
-        <CardDescription>
-          Login with your Google or Microsoft account
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="px-6 pb-6">
-        <form className="flex flex-col gap-6" noValidate onSubmit={onSubmit}>
-          <FieldGroup className="gap-4">
-            <div className="flex flex-col gap-3">
-              {SOCIAL_LOGIN_BUTTONS.map((button) => (
+      <AuthHeader
+        title={
+          mode === "sign-up" ? "Sign up for Backdesk" : "Sign in to Backdesk"
+        }
+      >
+        {mode === "sign-up"
+          ? "Already have an account? "
+          : "Don't have an account? "}
+        <Link
+          className="font-medium text-signal underline underline-offset-4 hover:text-signal/80 dark:text-[#7DD3FC] dark:hover:text-[#A5E4FF]"
+          href={mode === "sign-up" ? "/login" : "/sign-up"}
+        >
+          {mode === "sign-up" ? "Sign in" : "Sign up"}
+        </Link>
+      </AuthHeader>
+      <form className="flex flex-col gap-6" noValidate onSubmit={onSubmit}>
+        <FieldGroup className="gap-2">
+          <div className="mb-4 flex flex-col gap-2">
+            {SOCIAL_LOGIN_BUTTONS.map((button) => {
+              const Icon = button.icon
+              const isProviderPending = pendingAction === button.provider
+              const label = `${actionLabel} with ${button.providerLabel}`
+
+              return (
                 <Button
-                  aria-disabled="true"
-                  className="w-full"
-                  key={button.label}
-                  onClick={(event) => event.preventDefault()}
-                  title={button.title}
+                  className={cn("w-full", authSurfaceClass)}
+                  disabled={isFormBusy}
+                  key={button.provider}
+                  onClick={() =>
+                    onProviderSignIn(
+                      button.oauthProvider,
+                      button.provider,
+                      button.providerLabel
+                    )
+                  }
+                  title={label}
                   type="button"
                   variant="outline"
                 >
-                  {button.label}
+                  {isProviderPending ? (
+                    <Spinner data-icon="inline-start" />
+                  ) : (
+                    <Icon
+                      aria-hidden="true"
+                      className="size-4"
+                      data-auth-provider-icon={button.provider}
+                      data-icon="inline-start"
+                    />
+                  )}
+                  {isProviderPending ? "Redirecting..." : label}
                 </Button>
-              ))}
-            </div>
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              <Separator className="flex-1" />
-              <span>Or continue with</span>
-              <Separator className="flex-1" />
-            </div>
-            <Field data-invalid={!!emailError}>
-              <FieldLabel htmlFor="email">Email</FieldLabel>
-              <Input
+              )
+            })}
+          </div>
+          <Field className="gap-2" data-invalid={!!emailError}>
+            <FieldLabel
+              className="text-sm leading-5 font-medium text-foreground dark:text-[#F0ECE6]"
+              htmlFor="email"
+            >
+              Or continue with email
+            </FieldLabel>
+            <InputGroup
+              className="rounded-[10px] border-border bg-input shadow-none has-[[data-slot=input-group-control]:focus-visible]:border-ring has-[[data-slot=input-group-control]:focus-visible]:ring-ring/45 has-[[data-slot][aria-invalid=true]]:border-destructive dark:border-[#3B3D3F] dark:bg-[#18191A] dark:has-[[data-slot=input-group-control]:focus-visible]:border-[#3B3D3F] dark:has-[[data-slot=input-group-control]:focus-visible]:ring-[#F0ECE6]/25"
+              data-auth-email-input="true"
+            >
+              <InputGroupInput
+                key={isMagicLinkSent ? "sent-email" : "email"}
                 ref={inputRef}
                 aria-invalid={!!emailError}
+                aria-describedby={
+                  emailError ? "email-error" : "email-description"
+                }
                 autoComplete="email"
-                disabled={isSending}
+                className="px-3 text-foreground placeholder:text-muted-foreground disabled:cursor-default disabled:opacity-100 dark:text-[#F0ECE6] dark:placeholder:text-[#777777]"
+                disabled={isFormBusy || isMagicLinkSent}
                 id="email"
                 inputMode="email"
                 onChange={(event) => onEmailChange(event.target.value)}
-                placeholder="m@example.com"
+                placeholder="user@example.com"
                 type="email"
                 value={email}
               />
-              <FieldError>{emailError}</FieldError>
-            </Field>
-            <Button className="w-full" disabled={isSending} type="submit">
-              {isSending && <Spinner data-icon="inline-start" />}
-              {isSending ? "Sending..." : "Login"}
-            </Button>
-          </FieldGroup>
-        </form>
-      </CardContent>
-    </>
-  )
-}
-
-function MagicLinkStep({
-  formMessage,
-  isResending,
-  onResend,
-  onUseAnotherEmail,
-  resendCooldown,
-  submittedEmail,
-}: {
-  formMessage: string | null
-  isResending: boolean
-  onResend: () => void
-  onUseAnotherEmail: () => void
-  resendCooldown: number
-  submittedEmail: string
-}) {
-  const resendDisabled = isResending || resendCooldown > 0
-
-  return (
-    <>
-      <CardHeader className="items-center px-6 pt-6 pb-5 text-center">
-        <CardTitle className="text-xl leading-tight font-semibold">
-          Check your email
-        </CardTitle>
-        <CardDescription>
-          We sent a sign-in link to {submittedEmail}.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="px-6 pb-6">
-        <FieldGroup className="gap-6">
-          <Field>
-            <FieldDescription className="text-center">
-              Open the link from this device to finish signing in.
-            </FieldDescription>
-            {formMessage && (
-              <FieldDescription className="text-center text-foreground">
-                {formMessage}
-              </FieldDescription>
+            </InputGroup>
+            {emailError ? (
+              <span hidden id="email-error">
+                {emailError}
+              </span>
+            ) : (
+              <span hidden id="email-description">
+                A link will be sent to you
+              </span>
             )}
           </Field>
-          <div className="flex flex-col gap-3">
-            <Button
-              className="w-full"
-              disabled={resendDisabled}
-              onClick={onResend}
+          {isMagicLinkSent ? (
+            <button
+              aria-disabled="true"
+              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-[10px] border border-transparent bg-secondary px-3 text-sm font-medium whitespace-nowrap text-muted-foreground shadow-none dark:bg-[#18191A] dark:text-[#777777]"
+              data-auth-primary-action="true"
+              disabled
               type="button"
-              variant="outline"
             >
-              {isResending && <Spinner data-icon="inline-start" />}
-              {isResending
-                ? "Resending..."
-                : resendCooldown > 0
-                  ? `Resend in ${resendCooldown}s`
-                  : "Resend link"}
-            </Button>
+              <span
+                aria-hidden="true"
+                data-icon="inline-start"
+                data-magic-link-icon="true"
+              >
+                <HugeiconsIcon icon={AiMagicIcon} size={16} strokeWidth={1.8} />
+              </span>
+              Magic Link Sent
+            </button>
+          ) : (
             <Button
-              className="w-full"
-              onClick={onUseAnotherEmail}
-              type="button"
-              variant="link"
+              className={cn("w-full", authPrimaryClass)}
+              data-auth-primary-action="true"
+              disabled={isFormBusy}
+              type="submit"
             >
-              Use another email
+              {isSending ? (
+                <Spinner data-icon="inline-start" />
+              ) : (
+                <span
+                  aria-hidden="true"
+                  data-icon="inline-start"
+                  data-magic-link-icon="true"
+                >
+                  <HugeiconsIcon
+                    icon={AiMagicIcon}
+                    size={16}
+                    strokeWidth={1.8}
+                  />
+                </span>
+              )}
+              {isSending ? "Sending..." : "Send Magic Link"}
             </Button>
-          </div>
+          )}
+          {formMessage && (
+            <p
+              className="text-sm leading-5 text-foreground dark:text-[#F0ECE6]"
+              role="alert"
+            >
+              {formMessage}
+            </p>
+          )}
         </FieldGroup>
-      </CardContent>
+      </form>
     </>
   )
 }
@@ -404,49 +463,87 @@ function SuccessStep({
 }) {
   return (
     <>
-      <CardHeader className="items-center px-6 pt-7 pb-6 text-center">
-        <CardTitle className="text-xl leading-tight font-semibold">
-          Login successful
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="px-6 pb-6">
-        <div className="flex flex-col gap-3">
-          <Button
-            className="w-full"
-            disabled={isSigningOut}
-            onClick={onLogout}
-            type="button"
-          >
-            {isSigningOut && <Spinner data-icon="inline-start" />}
-            {isSigningOut ? "Logging out..." : "Logout"}
-          </Button>
-          {formMessage && (
-            <p className="text-center text-sm text-destructive" role="alert">
-              {formMessage}
-            </p>
+      <AuthHeader title="Sign in successful" />
+      <div className="flex flex-col gap-3">
+        <Button
+          className={cn("w-full", authPrimaryClass)}
+          disabled={isSigningOut}
+          onClick={onLogout}
+          type="button"
+        >
+          {isSigningOut ? (
+            <Spinner data-icon="inline-start" />
+          ) : (
+            <LogOut aria-hidden="true" data-icon="inline-start" size={16} />
           )}
-        </div>
-      </CardContent>
+          {isSigningOut ? "Signing out..." : "Sign out"}
+        </Button>
+        {formMessage && (
+          <p className="text-center text-sm text-destructive" role="alert">
+            {formMessage}
+          </p>
+        )}
+      </div>
     </>
   )
 }
 
-function TermsCopy() {
+function GoogleIcon(props: ComponentProps<"svg">) {
   return (
-    <p className="max-w-[20rem] text-center text-xs leading-5 text-muted-foreground">
-      By clicking continue, you agree to our{" "}
+    <svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg" {...props}>
+      <path
+        d="M17.64 9.204c0-.638-.057-1.252-.164-1.841H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.258h2.91c1.702-1.567 2.682-3.874 2.682-6.614Z"
+        fill="#4285F4"
+      />
+      <path
+        d="M9 18c2.43 0 4.467-.806 5.956-2.182l-2.909-2.258c-.806.54-1.837.86-3.047.86-2.344 0-4.328-1.583-5.036-3.71H.957v2.332A8.997 8.997 0 0 0 9 18Z"
+        fill="#34A853"
+      />
+      <path
+        d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.997 8.997 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332Z"
+        fill="#FBBC05"
+      />
+      <path
+        d="M9 3.58c1.321 0 2.508.454 3.44 1.346l2.582-2.581C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58Z"
+        fill="#EA4335"
+      />
+    </svg>
+  )
+}
+
+function MicrosoftIcon(props: ComponentProps<"svg">) {
+  return (
+    <svg viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg" {...props}>
+      <rect fill="#f25022" height="10" width="10" x="1" y="1" />
+      <rect fill="#7fba00" height="10" width="10" x="11" y="1" />
+      <rect fill="#00a4ef" height="10" width="10" x="1" y="11" />
+      <rect fill="#ffb900" height="10" width="10" x="11" y="11" />
+    </svg>
+  )
+}
+
+function TermsCopy({ mode }: { mode: AuthMode }) {
+  return (
+    <p
+      className={cn(
+        "w-full text-center text-xs leading-5",
+        authTextSecondaryClass
+      )}
+      data-auth-terms="true"
+    >
+      By signing {mode === "sign-up" ? "up" : "in"} you agree to our{" "}
       <a
-        className="underline underline-offset-4 hover:text-foreground"
+        className="text-foreground underline underline-offset-4 hover:text-foreground dark:text-[#F0ECE6] dark:hover:text-[#F0ECE6]"
         href="#"
       >
-        Terms of Service
-      </a>{" "}
-      and{" "}
+        terms
+      </a>
+      <br className="hidden md:block" /> and{" "}
       <a
-        className="underline underline-offset-4 hover:text-foreground"
+        className="text-foreground underline underline-offset-4 hover:text-foreground dark:text-[#F0ECE6] dark:hover:text-[#F0ECE6]"
         href="#"
       >
-        Privacy Policy
+        privacy policy
       </a>
     </p>
   )

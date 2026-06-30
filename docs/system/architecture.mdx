@@ -18,7 +18,7 @@ Browser
 
 `apps/web` owns the product runtime:
 
-- `app/(auth)` contains login and callback routes.
+- `app/(auth)` contains login, sign-up, and callback routes.
 - `app/(app)` contains authenticated product routes.
 - `app/api` exposes JSON endpoints used by collection-aware blocks and UI.
 - `actions` contains Server Actions for writes.
@@ -27,17 +27,18 @@ Browser
 
 ## Route structure
 
-| Route | Purpose |
-| --- | --- |
-| `/login` | Email magic-link login UI and post-callback success state |
-| `/callback` | Client-side Supabase callback completion |
-| `/` | Authenticated empty/dashboard landing route |
-| `/p/[pageId]` | Dashboard page editor |
-| `/c/[pageId]` | Collection page list view |
-| `/settings/account` | Password, sign out, delete account |
-| `/settings/profile` | Display name, avatar, timezone |
-| `/settings/appearance` | Theme mode and accent |
-| `/settings/connections` | Connection import surface |
+| Route                   | Purpose                                                     |
+| ----------------------- | ----------------------------------------------------------- |
+| `/login`                | Email magic-link sign-in UI and post-callback success state |
+| `/sign-up`              | Email magic-link sign-up UI                                 |
+| `/callback`             | Client-side Supabase callback completion                    |
+| `/`                     | Authenticated empty/dashboard landing route                 |
+| `/p/[pageId]`           | Dashboard page editor                                       |
+| `/c/[pageId]`           | Collection page list view                                   |
+| `/settings/account`     | Password, sign out, delete account                          |
+| `/settings/profile`     | Display name, avatar, timezone                              |
+| `/settings/appearance`  | Theme mode and accent                                       |
+| `/settings/connections` | Connection import surface                                   |
 
 ## Data access pattern
 

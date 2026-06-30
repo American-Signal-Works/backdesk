@@ -36,24 +36,18 @@ export async function middleware(request: NextRequest) {
     path.startsWith("/p/") ||
     path.startsWith("/c/") ||
     path.startsWith("/settings")
-  const isAuthRoute = path.startsWith("/login")
+  const isAuthRoute = path.startsWith("/login") || path.startsWith("/sign-up")
   const isLoginSuccessRoute =
     path === "/login" && request.nextUrl.searchParams.get("auth") === "success"
 
   if (isAppRoute && !user) {
-    const url = request.nextUrl.clone()
+    const url = new URL("/login", request.url)
     url.pathname = "/login"
     return NextResponse.redirect(url)
   }
 
-  if (isLoginSuccessRoute && !user) {
-    const url = request.nextUrl.clone()
-    url.searchParams.delete("auth")
-    return NextResponse.redirect(url)
-  }
-
   if (isAuthRoute && user && !isLoginSuccessRoute) {
-    const url = request.nextUrl.clone()
+    const url = new URL("/", request.url)
     url.pathname = "/"
     return NextResponse.redirect(url)
   }

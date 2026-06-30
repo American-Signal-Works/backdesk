@@ -3,9 +3,9 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 
+import { getSafePostAuthPath } from "@/lib/auth/redirect"
 import { createClient } from "@/lib/supabase/browser"
 
-const SUCCESS_REDIRECT = "/login?auth=success"
 const FAILURE_REDIRECT = "/login?error=callback_failed"
 
 export default function AuthCallbackPage() {
@@ -13,10 +13,11 @@ export default function AuthCallbackPage() {
 
   useEffect(() => {
     let isMounted = true
+    const url = new URL(window.location.href)
+    const successRedirect = getSafePostAuthPath(url.searchParams.get("next"))
 
     async function completeSignIn() {
       const supabase = createClient()
-      const url = new URL(window.location.href)
       const hashParams = new URLSearchParams(
         window.location.hash.replace(/^#/, "")
       )
@@ -75,9 +76,7 @@ export default function AuthCallbackPage() {
 
     completeSignIn()
       .then(() => {
-        if (isMounted) {
-          router.replace(SUCCESS_REDIRECT)
-        }
+        if (isMounted) router.replace(successRedirect)
       })
       .catch(() => {
         if (isMounted) {
@@ -91,7 +90,7 @@ export default function AuthCallbackPage() {
   }, [router])
 
   return (
-    <main className="dark flex min-h-svh items-center justify-center bg-muted px-4 text-foreground">
+    <main className="flex min-h-svh items-center justify-center bg-background px-4 text-foreground">
       <div className="text-sm text-muted-foreground">Completing sign in...</div>
     </main>
   )

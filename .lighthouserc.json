@@ -1,7 +1,7 @@
 {
   "ci": {
     "collect": {
-      "url": ["http://localhost:3000/sign-in", "http://localhost:3000/sign-up"],
+      "url": ["http://localhost:3000/login", "http://localhost:3000/sign-up"],
       "startServerCommand": "pnpm --filter web start",
       "startServerReadyPattern": "Ready in",
       "numberOfRuns": 2

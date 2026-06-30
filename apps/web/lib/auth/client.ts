@@ -1,13 +1,37 @@
 import { createClient } from "@/lib/supabase/browser"
-import { getEmailRedirectTo } from "@/lib/auth/redirect"
+import { getAuthCallbackUrl, getEmailRedirectTo } from "@/lib/auth/redirect"
 
-export async function requestEmailMagicLink(email: string) {
+export type OAuthProvider = "google" | "azure"
+
+type EmailMagicLinkOptions = {
+  shouldCreateUser?: boolean
+}
+
+export async function requestEmailMagicLink(
+  email: string,
+  options: EmailMagicLinkOptions = {}
+) {
   return withAuthFailure(
     () =>
       createClient().auth.signInWithOtp({
         email,
         options: {
           emailRedirectTo: getEmailRedirectTo(),
+          shouldCreateUser: options.shouldCreateUser,
+        },
+      }),
+    (error) => ({ data: null, error })
+  )
+}
+
+export async function requestOAuthSignIn(provider: OAuthProvider) {
+  return withAuthFailure(
+    () =>
+      createClient().auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: getAuthCallbackUrl(),
+          ...(provider === "azure" ? { scopes: "email" } : {}),
         },
       }),
     (error) => ({ data: null, error })

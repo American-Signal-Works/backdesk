@@ -5,9 +5,12 @@ description: "Current Supabase auth flow, middleware behavior, and session handl
 
 The app uses Supabase Auth with SSR cookie support from `@supabase/ssr`.
 
-## Login UI
+## Auth UI
 
-The active login route is `/login`.
+The active auth routes are:
+
+- `/login`
+- `/sign-up`
 
 `apps/web/components/auth/LoginAuthFlow.tsx` implements a three-step flow:
 
@@ -17,7 +20,14 @@ The active login route is `/login`.
 
 Email validation and normalization live in `apps/web/lib/auth/validation.ts`.
 
-Google and Microsoft buttons are visible but disabled in the current UI.
+The Google and Microsoft buttons start Supabase OAuth in the browser:
+
+- Google maps to Supabase provider `google`.
+- Microsoft maps to Supabase provider `azure`.
+
+The provider buttons require matching Supabase provider configuration before they can complete a live production sign-in.
+
+Supabase OAuth does not expose the email OTP `shouldCreateUser` option. While sign-ups are enabled for the project, a first-time Google or Microsoft OAuth completion can create a Supabase user from either the sign-in or sign-up screen. If the product needs strict "sign in only" social auth, enforce that with Supabase Auth policy/hooks or an invitation/provisioning layer before enabling those providers broadly.
 
 ## Magic link request
 
@@ -30,11 +40,76 @@ createClient().auth.signInWithOtp({
   email,
   options: {
     emailRedirectTo: getEmailRedirectTo(),
+    shouldCreateUser,
   },
 })
 ```
 
-`getEmailRedirectTo()` uses `NEXT_PUBLIC_SITE_URL` when set, otherwise it falls back to `window.location.origin`, and appends `/callback`.
+Sign-in mode passes `shouldCreateUser: false`. Sign-up mode passes `shouldCreateUser: true`.
+
+`getEmailRedirectTo()` uses `NEXT_PUBLIC_SITE_URL` when set, otherwise it falls back to `window.location.origin`, and appends `/callback?next=%2Flogin%3Fauth%3Dsuccess`.
+
+## Provider sign-on
+
+The browser calls `requestOAuthSignIn()` from `apps/web/lib/auth/client.ts`.
+
+That helper calls:
+
+```ts
+createClient().auth.signInWithOAuth({
+  provider,
+  options: {
+    redirectTo: getAuthCallbackUrl(),
+    ...(provider === "azure" ? { scopes: "email" } : {}),
+  },
+})
+```
+
+Microsoft sign-on uses Supabase's `azure` provider and requests the `email` scope because Supabase Auth requires Azure to return a valid email address.
+
+Provider completion uses the same `/callback` route and then redirects to the auth success screen:
+
+```text
+/login?auth=success
+```
+
+### Provider setup
+
+Production Google and Microsoft sign-on requires the external OAuth apps to be configured before Supabase can complete the flow.
+
+For the Backdesk Supabase project, add this callback URL to each external OAuth app:
+
+```text
+https://lbftopppjjdejvmwuxmq.supabase.co/auth/v1/callback
+```
+
+In Supabase Auth URL Configuration, the production allowlist must include:
+
+```text
+https://usebackdesk.com/callback
+```
+
+Local development should include the app origin used by `NEXT_PUBLIC_SITE_URL`, for example:
+
+```text
+http://localhost:3000/callback
+```
+
+Google Cloud setup:
+
+- Create a Web OAuth client.
+- Add `https://usebackdesk.com` as an authorized JavaScript origin.
+- Add the Supabase callback URL above as an authorized redirect URI.
+- Enable the Supabase Google provider with the Google client ID and client secret.
+
+Microsoft Entra setup:
+
+- Register a Web application.
+- Add the Supabase callback URL above as the Web redirect URI.
+- Add a client secret and copy the secret value, not the secret ID.
+- Enable the Supabase Azure provider with the application client ID and client secret.
+- Keep the default common tenant URL unless the app should only allow one tenant or personal Microsoft accounts.
+- Configure the optional `email` and `xms_edov` claims when using tenant settings that could emit unverified email domains.
 
 ## Callback completion
 
@@ -47,7 +122,7 @@ The callback page supports multiple Supabase callback shapes:
 - `access_token` and `refresh_token` hash parameters, completed with `setSession()`
 - an already-present session from `getSession()`
 
-On success, the route replaces the URL with:
+On success, the route replaces the URL with the allowlisted `next` path. The default is:
 
 ```text
 /login?auth=success
@@ -72,18 +147,18 @@ Protected routes are:
 
 Unauthenticated users on protected routes are redirected to `/login`.
 
-Authenticated users visiting `/login` are redirected to `/`, except when the URL is `/login?auth=success`.
+Authenticated users visiting `/login` or `/sign-up` are redirected to `/`, except when the URL is `/login?auth=success`.
 
-If `/login?auth=success` is reached without a user session, middleware removes `auth=success` and redirects back to `/login`.
+`/login?auth=success` is allowed to render even when middleware cannot yet observe the fresh Supabase session cookie. The callback page sets the browser session first, then routes to that success screen; stripping the query in middleware can make a valid magic-link callback look like a failed login.
 
 ## Server clients
 
 Use the right Supabase client for the runtime:
 
-| Runtime | File | Purpose |
-| --- | --- | --- |
-| Server Components and Server Actions | `apps/web/lib/supabase/server.ts` | Authenticated Supabase client backed by Next cookies |
-| Browser components | `apps/web/lib/supabase/browser.ts` | Browser Supabase client for auth interactions |
-| Admin-only server actions | `apps/web/lib/supabase/admin.ts` | Service-role client that bypasses RLS |
+| Runtime                              | File                               | Purpose                                              |
+| ------------------------------------ | ---------------------------------- | ---------------------------------------------------- |
+| Server Components and Server Actions | `apps/web/lib/supabase/server.ts`  | Authenticated Supabase client backed by Next cookies |
+| Browser components                   | `apps/web/lib/supabase/browser.ts` | Browser Supabase client for auth interactions        |
+| Admin-only server actions            | `apps/web/lib/supabase/admin.ts`   | Service-role client that bypasses RLS                |
 
 The admin client must stay server-only.

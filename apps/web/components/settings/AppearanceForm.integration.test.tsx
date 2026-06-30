@@ -1,7 +1,9 @@
-import { cleanup, render, waitFor } from "@testing-library/react"
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { ThemeProvider } from "./theme-provider"
+import { updateAppearance } from "@/actions/settings"
+import { ThemeProvider } from "@/components/theme-provider"
+import { AppearanceForm } from "./AppearanceForm"
 
 type MqlListener = (this: MediaQueryList, event: MediaQueryListEvent) => void
 
@@ -46,55 +48,69 @@ function createMatchMediaController(initialMatches: boolean) {
   }
 }
 
-describe("ThemeProvider", () => {
+vi.mock("@/actions/settings", () => ({
+  updateAppearance: vi.fn(),
+}))
+
+vi.mock("sonner", () => ({
+  toast: {
+    error: vi.fn(),
+  },
+}))
+
+const updateAppearanceMock = vi.mocked(updateAppearance)
+
+describe("AppearanceForm theme integration", () => {
+  beforeEach(() => {
+    updateAppearanceMock.mockReset()
+    updateAppearanceMock.mockResolvedValue({ ok: true, data: {} })
+    localStorage.clear()
+    document.documentElement.className = ""
+  })
+
   afterEach(() => {
-    cleanup()
     localStorage.clear()
     document.documentElement.className = ""
     vi.unstubAllGlobals()
   })
 
-  it("resolves system mode from a dark operating system preference", async () => {
-    const media = createMatchMediaController(true)
-    vi.stubGlobal("matchMedia", media.matchMedia)
-
-    render(
-      <ThemeProvider defaultTheme="system">
-        <div />
-      </ThemeProvider>
-    )
-
-    await waitFor(() => {
-      expect(document.documentElement).toHaveClass("dark")
-    })
-  })
-
-  it("lets persisted system mode override a stale explicit local theme", async () => {
-    const media = createMatchMediaController(true)
-    vi.stubGlobal("matchMedia", media.matchMedia)
-    localStorage.setItem("theme", "light")
-
-    render(
-      <ThemeProvider defaultTheme="system">
-        <div />
-      </ThemeProvider>
-    )
-
-    await waitFor(() => {
-      expect(localStorage.getItem("theme")).toBe("system")
-      expect(document.documentElement).toHaveClass("dark")
-    })
-  })
-
-  it("updates system mode when the operating system preference changes", async () => {
+  it("switches from an explicit dark preference to system light immediately", async () => {
     const media = createMatchMediaController(false)
     vi.stubGlobal("matchMedia", media.matchMedia)
 
     render(
-      <ThemeProvider defaultTheme="system">
-        <div />
+      <ThemeProvider defaultTheme="dark">
+        <AppearanceForm initialAccent="default" initialMode="dark" />
       </ThemeProvider>
     )
+
+    await waitFor(() => {
+      expect(document.documentElement).toHaveClass("dark")
+    })
+
+    fireEvent.click(screen.getByRole("radio", { name: "System" }))
+
+    await waitFor(() => {
+      expect(localStorage.getItem("theme")).toBe("system")
+      expect(document.documentElement).not.toHaveClass("dark")
+      expect(updateAppearanceMock).toHaveBeenLastCalledWith({
+        theme_accent: "default",
+        theme_mode: "system",
+      })
+    })
+  })
+
+  it("keeps following operating system changes after selecting system", async () => {
+    const media = createMatchMediaController(false)
+    vi.stubGlobal("matchMedia", media.matchMedia)
+
+    render(
+      <ThemeProvider defaultTheme="dark">
+        <AppearanceForm initialAccent="default" initialMode="dark" />
+      </ThemeProvider>
+    )
+
+    fireEvent.click(screen.getByRole("radio", { name: "System" }))
 
     await waitFor(() => {
       expect(document.documentElement).not.toHaveClass("dark")
@@ -110,37 +126,6 @@ describe("ThemeProvider", () => {
 
     await waitFor(() => {
       expect(document.documentElement).not.toHaveClass("dark")
-    })
-  })
-
-  it("keeps explicit modes independent from the operating system preference", async () => {
-    const media = createMatchMediaController(true)
-    vi.stubGlobal("matchMedia", media.matchMedia)
-
-    const { unmount } = render(
-      <ThemeProvider defaultTheme="light">
-        <div />
-      </ThemeProvider>
-    )
-
-    await waitFor(() => {
-      expect(document.documentElement).not.toHaveClass("dark")
-    })
-
-    unmount()
-    cleanup()
-    localStorage.clear()
-    document.documentElement.className = ""
-    media.setMatches(false)
-
-    render(
-      <ThemeProvider defaultTheme="dark">
-        <div />
-      </ThemeProvider>
-    )
-
-    await waitFor(() => {
-      expect(document.documentElement).toHaveClass("dark")
     })
   })
 })
